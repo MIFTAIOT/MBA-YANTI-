@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MBA YANTI - Loading...</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* === TEMA LIVE WALLPAPER (GELAP & BERGERAK) === */
+        body {
+            margin: 0;
+            padding: 0;
+            /* Gradasi Gelap: Biru Laut Dalam -> Teal Gelap -> Hijau Hutan */
+            background: linear-gradient(-45deg, #000428, #004e92, #004d40, #11998e);
+            background-size: 400% 400%; /* Ukuran diperbesar untuk efek gerak */
+            animation: gradientBG 15s ease infinite; /* Animasi Gerak */
+            
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Nunito', sans-serif;
+            overflow: hidden;
+            color: #fff;
+            position: relative;
+        }
+
+        /* ANIMASI BACKGROUND GERAK */
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* BACKGROUND ITEMS (Melayang di belakang) */
+        .bg-icon {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.15); /* Lebih transparan biar tidak ganggu teks */
+            font-size: 3em;
+            animation: drift 12s infinite linear;
+            z-index: 0;
+            text-shadow: 0 0 5px rgba(255,255,255,0.2);
+        }
+        
+        /* Posisi Acak Ikon */
+        .i1 { top: 10%; left: 10%; animation-duration: 14s; }
+        .i2 { top: 20%; right: 20%; animation-duration: 16s; font-size: 2em; }
+        .i3 { bottom: 15%; left: 15%; animation-duration: 18s; font-size: 4em; }
+        .i4 { bottom: 10%; right: 10%; animation-duration: 15s; }
+        .i5 { top: 50%; left: 85%; animation-duration: 22s; font-size: 2.5em; }
+        .i6 { top: 60%; left: 5%; animation-duration: 19s; font-size: 1.5em; }
+
+        /* ROBOT CONTAINER */
+        .robot-wrapper {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        /* ROBOT ANDROID GLOWING */
+        .cute-robot {
+            font-size: 6.5em; 
+            color: #fff;
+            /* Efek Glowing Putih & Hijau Neon */
+            filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.6));
+            animation: floatRobot 3.5s ease-in-out infinite;
+            display: inline-block;
+            transition: transform 0.3s;
+        }
+
+        /* MATA KEDIP */
+        .cute-robot::after {
+            content: '';
+            position: absolute;
+            top: 38%; left: 28%;
+            width: 8px; height: 8px;
+            background: #2d3436; 
+            border-radius: 50%;
+            box-shadow: 28px 0 0 #2d3436; 
+            animation: blinkEyes 4s infinite;
+        }
+
+        /* BUBBLE CHAT */
+        .chat-bubble {
+            background: rgba(255, 255, 255, 0.95);
+            color: #006266; /* Teks Hijau Tua Gelap (Kontras Bagus) */
+            padding: 12px 25px;
+            border-radius: 25px;
+            border-bottom-left-radius: 0;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: bold;
+            font-size: 1.1em;
+            position: absolute;
+            top: -50px;
+            right: -75px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            white-space: nowrap;
+        }
+
+        /* JUDUL */
+        .app-title {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 3em;
+            /* Shadow Teks Kuat */
+            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            margin-bottom: 5px;
+            z-index: 10;
+            font-weight: 600;
+        }
+        
+        .app-subtitle {
+            font-size: 1.1em;
+            opacity: 1;
+            color: #dfe6e9; /* Putih agak abu dikit */
+            margin-bottom: 45px;
+            z-index: 10;
+            background: rgba(0,0,0,0.3); /* Latar gelap transparan */
+            padding: 8px 25px;
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* LOADING BAR */
+        .loader-box {
+            width: 320px;
+            height: 14px;
+            background: rgba(0,0,0,0.4); /* Track lebih gelap */
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            z-index: 10;
+            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .loader-fill {
+            height: 100%;
+            width: 0%;
+            /* Gradient Hijau Cerah agar menonjol di background gelap */
+            background: linear-gradient(90deg, #00f2fe, #4facfe);
+            border-radius: 20px;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 15px rgba(79, 172, 254, 0.8);
+        }
+
+        #status-text {
+            margin-top: 15px;
+            font-size: 1em;
+            z-index: 10;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: 0.5px;
+        }
+
+        /* FOOTER */
+        .footer {
+            position: absolute;
+            bottom: 25px;
+            font-size: 0.8em;
+            opacity: 0.8;
+            z-index: 10;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        /* ANIMATIONS */
+        @keyframes floatRobot {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(3deg); }
+        }
+
+        @keyframes blinkEyes {
+            0%, 48%, 52%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.1); }
+        }
+
+        @keyframes drift {
+            from { transform: translateY(0) rotate(0deg); opacity: 0.3; }
+            to { transform: translateY(-100px) rotate(20deg); opacity: 0; }
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.5) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <i class="fa-solid fa-book bg-icon i1"></i>
+    <i class="fa-solid fa-graduation-cap bg-icon i2"></i>
+    <i class="fa-solid fa-pencil bg-icon i3"></i>
+    <i class="fa-solid fa-lightbulb bg-icon i4"></i>
+    <i class="fa-solid fa-star bg-icon i5"></i>
+    <i class="fa-solid fa-rocket bg-icon i6"></i>
+
+    <div class="robot-wrapper">
+        <div class="chat-bubble" id="robot-text">Halo! 👋</div>
+        <div class="cute-robot">
+            <i class="fa-brands fa-android"></i> 
+        </div>
+    </div>
+
+    <div class="app-title">MBA YANTI</div>
+    <div class="app-subtitle">✨ Model Belajar Ala Bu Yanti ✨</div>
+
+    <div class="loader-box">
+        <div class="loader-fill" id="progress-bar"></div>
+    </div>
+    <div id="status-text">Menyiapkan kelas...</div>
+
+    <div class="footer">Created with 💚 by <strong>MiDeveloper 2026</strong></div>
+
+    <script>
+        // === LOGIKA ANIMASI ===
+        
+        const progressBar = document.getElementById('progress-bar');
+        const statusText = document.getElementById('status-text');
+        const robotText = document.getElementById('robot-text');
+
+        // Pesan Status Loading
+        const messages = [
+            "Menyiapkan Kelas... 🏫",
+            "Mencari Buku... 📘",
+            "Menghubung ke Mifta.IoT... 🌐",
+            "Memanggil Bu Yanti... 👩‍🏫",
+            "Siap Belajar! 🚀"
+        ];
+
+        // Celotehan Robot Android
+        const robotTalks = [
+            "Lagi loading... ⏳",
+            "Sabar yaa... 😊",
+            "SERVER MIFTA_IOT_01 System OK! ✅",
+            "Bentar lagi... ⚡",
+            "Lets Go! 🎉"
+        ];
+
+        let progress = 0;
+        let msgIndex = 0;
+
+        // Timer Utama
+        const timer = setInterval(() => {
+            progress += Math.random() * 1.5; // Agak lebih lambat biar bisa nikmatin animasinya
+            if(progress > 100) progress = 100;
+
+            // Update Width Bar
+            progressBar.style.width = progress + "%";
+
+            // Ganti Pesan setiap kelipatan 20%
+            if (progress > (msgIndex + 1) * 20) {
+                if (messages[msgIndex]) statusText.textContent = messages[msgIndex];
+                if (robotTalks[msgIndex]) robotText.textContent = robotTalks[msgIndex];
+                
+                // Efek Animasi Bubble (Refresh)
+                robotText.style.animation = 'none';
+                robotText.offsetHeight; 
+                robotText.style.animation = 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+                
+                msgIndex++;
+            }
+
+            // SELESAI -> PINDAH HALAMAN
+   // SELESAI -> PINDAH HALAMAN
+            if (progress >= 100) {
+                clearInterval(timer);
+                statusText.textContent = "Berhasil Masuk! 🎉";
+                robotText.textContent = "Welcome! 😍";
+                
+                setTimeout(() => {
+                    // 1. BERIKAN STEMPEL (Tanda user sudah nonton intro)
+                    sessionStorage.setItem('sudahNontonIntro', 'true');
+                    
+                    // 2. PINDAH KEMBALI KE INDEX (Masuk ke Menu Utama)
+                    window.location.replace("index.html"); 
+                }, 1000);
+            }
+            }, 50); // Tutup kurung setInterval (ini yang tadi hilang)
+
+    </script>
+
+</body>
+</html>

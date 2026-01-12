@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Command Center - Mam Yanti</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { background-color: #0f0f1a; color: #fff; font-family: 'Poppins', sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: #1b1b2f; padding: 30px; border-radius: 20px; border: 1px solid #333; }
+        .btn-cyber { background: linear-gradient(45deg, #0984e3, #00d2d3); border: none; color: white; padding: 15px; width: 100%; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; font-family: 'Orbitron', sans-serif; }
+        .btn-cyber:disabled { background: #555; cursor: not-allowed; opacity: 0.6; }
+        .panel { display: none; }
+        .panel.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 20px; }
+        .player-card { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; text-align: center; font-size: 0.9em; }
+        .timer-display { font-size: 3em; text-align: center; color: #ff6b6b; font-weight: bold; margin: 10px 0; }
+        .question-box { background: #2c2c54; padding: 20px; border-radius: 10px; margin: 20px 0; border: 1px dashed #4b4b8c; }
+        select, input { width: 100%; padding: 10px; margin-bottom: 15px; background: #0f0f1a; color: white; border: 1px solid #00d2d3; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <audio id="sfx-countdown" src="assets/sounds/countdown.mp3" preload="auto"></audio>
+
+    <div class="container">
+        <button onclick="window.location.href='index.html'" style="background:none; border:none; color:#aaa; cursor:pointer; margin-bottom:10px;"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+
+        <div id="panel-setup" class="panel active">
+            <h1 style="font-family:'Orbitron'; color:#00d2d3;">GAME SETUP</h1>
+            <label>1. Pilih Kelas:</label>
+            <select id="setup-class"></select>
+            <label>2. Upload Soal (.txt):</label>
+            <input type="file" id="setup-file" accept=".txt">
+            <button onclick="createRoom()" class="btn-cyber">BUAT ROOM</button>
+        </div>
+
+        <div id="panel-lobby" class="panel">
+            <div style="text-align: center;">
+                <h3>PIN: <span id="lobby-pin" style="color:#f1c40f; font-size:2em;">...</span></h3>
+                <p>Siswa Masuk: <strong id="lobby-count">0</strong></p>
+            </div>
+
+            <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 10px; margin-top: 20px;">
+                <h4 style="margin-top:0; color:#f1c40f;">ATUR KELOMPOK</h4>
+                
+                <label>Mau Berapa Kelompok?</label>
+                <select id="team-count">
+                    <option value="2">2 Kelompok (Merah vs Biru)</option>
+                    <option value="3">3 Kelompok</option>
+                    <option value="4" selected>4 Kelompok (Standard)</option>
+                    <option value="5">5 Kelompok</option>
+                    <option value="6">6 Kelompok</option>
+                    <option value="8">8 Kelompok (Battle Royale)</option>
+                </select>
+
+                <div style="display:flex; gap:10px;">
+                    <button onclick="shuffleTeams(false)" class="btn-cyber" style="background: #e67e22; margin-top:0;">
+                        <i class="fa-solid fa-shuffle"></i> ACAK SENDIRI (GURU)
+                    </button>
+                    <button onclick="pickStudentToShuffle()" class="btn-cyber" style="background: #9b59b6; margin-top:0;">
+                        <i class="fa-solid fa-hand-pointer"></i> SURUH SISWA ACAK
+                    </button>
+                </div>
+            </div>
+
+            <div id="lobby-list" class="player-grid"></div>
+            <button onclick="startGame()" class="btn-cyber" style="background: #27ae60; margin-top: 30px;">MULAI GAME</button>
+        </div>
+
+        <div id="panel-game" class="panel">
+            <div style="display:flex; justify-content:space-between;">
+                <span>Soal <strong id="q-number">1</strong></span>
+                <span>Status: <strong id="status-badge">Menunggu</strong></span>
+            </div>
+            <div class="question-box">
+                <h3 id="q-text">...</h3>
+                <div id="q-options" style="color:#ccc;"></div>
+            </div>
+            <div id="game-timer" class="timer-display">STOP</div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button id="btn-open" onclick="openAnswers()" class="btn-cyber" style="background: #2ecc71;">BUKA JAWABAN</button>
+                <button id="btn-close" onclick="closeAnswers()" class="btn-cyber" style="background: #e74c3c;" disabled>TUTUP JAWABAN</button>
+            </div>
+            
+            <button onclick="nextQuestion()" class="btn-cyber" style="background:#333; margin-top:20px;">Soal Berikutnya >></button>
+            <button onclick="endGame()" class="btn-cyber" style="background:#c0392b; margin-top:30px;">AKHIRI SESI</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="assets/js/firebase-config.js"></script>
+
+    <script>
+        let currentSessionId = null;
+        let questions = [];
+        let currentQIndex = 0;
+        let timerInterval = null;
+
+        firebase.auth().onAuthStateChanged(async user => {
+            if(user) {
+                const snap = await db.collection('classes').where('teacherId','==',user.uid).get();
+                const sel = document.getElementById('setup-class');
+                snap.forEach(d => sel.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
+            }
+        });
+
+        document.getElementById('setup-file').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const lines = ev.target.result.split(/\r?\n/);
+                let currentQ = null;
+                questions = [];
+                lines.forEach(l => {
+                    l = l.trim();
+                    if(l.startsWith('Soal:')) {
+                        if(currentQ) questions.push(currentQ);
+                        currentQ = { text: l.substring(5).trim(), options: ['','','',''], key: 0 };
+                    } else if(l.startsWith('A:')) currentQ.options[0] = l.substring(2).trim();
+                    else if(l.startsWith('B:')) currentQ.options[1] = l.substring(2).trim();
+                    else if(l.startsWith('C:')) currentQ.options[2] = l.substring(2).trim();
+                    else if(l.startsWith('D:')) currentQ.options[3] = l.substring(2).trim();
+                    else if(l.startsWith('Jawaban:')) {
+                        const k = l.substring(8).trim().toUpperCase();
+                        currentQ.key = k==='B'?1 : k==='C'?2 : k==='D'?3 : 0;
+                    }
+                });
+                if(currentQ) questions.push(currentQ);
+                alert(`Berhasil memuat ${questions.length} soal!`);
+            };
+            reader.readAsText(this.files[0]);
+        });
+
+        async function createRoom() {
+            const cid = document.getElementById('setup-class').value;
+            if(!cid || questions.length===0) return alert("Pilih kelas & upload soal dulu!");
+            
+            const pin = Math.floor(100000 + Math.random() * 900000).toString();
+            const ref = await db.collection('gameSessions').add({
+                pin: pin, classId: cid, teacherId: firebase.auth().currentUser.uid,
+                status: 'lobby', questions: questions, currentQuestionIndex: 0, roundStatus: 'closed',
+                triggerShuffle: false, shufflerId: null, // Reset state acak
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            currentSessionId = ref.id;
+            document.getElementById('lobby-pin').textContent = pin;
+            
+            // 🔥 LISTENER SINYAL ACAK DARI SISWA 🔥
+            // Kalau ada siswa tekan tombol acak, Guru yang proses pembagiannya
+            db.collection('gameSessions').doc(currentSessionId).onSnapshot(doc => {
+                const d = doc.data();
+                if(d.triggerShuffle === true) {
+                    shuffleTeams(true); // Eksekusi dengan settingan Guru
+                }
+            });
+
+            monitorLobby();
+            switchPanel('panel-lobby');
+        }
+
+        function monitorLobby() {
+            db.collection('gameSessions').doc(currentSessionId).collection('players').onSnapshot(snap => {
+                document.getElementById('lobby-count').textContent = snap.size;
+                let h = '';
+                snap.forEach(d => {
+                    const p = d.data();
+                    const color = p.groupColor || '#555';
+                    h += `<div class="player-card" style="border-bottom: 4px solid ${color}">
+                            ${p.name}<br><small>${p.groupName||'No Team'}</small>
+                          </div>`;
+                });
+                document.getElementById('lobby-list').innerHTML = h;
+            });
+        }
+
+        // --- FITUR ACAK (DINAMIS SESUAI DROPDOWN) ---
+        async function pickStudentToShuffle() {
+            const snap = await db.collection('gameSessions').doc(currentSessionId).collection('players').get();
+            if(snap.empty) return alert("Belum ada siswa!");
+            
+            const rnd = Math.floor(Math.random() * snap.size);
+            const chosen = snap.docs[rnd];
+            
+            await db.collection('gameSessions').doc(currentSessionId).update({ shufflerId: chosen.id });
+            alert(`Terpilih: ${chosen.data().name}. Menunggu dia menekan tombol di HP-nya...`);
+        }
+
+        async function shuffleTeams(isFromStudent) {
+            // 1. BACA JUMLAH KELOMPOK DARI DROPDOWN
+            const teamCount = parseInt(document.getElementById('team-count').value);
+            
+            const snap = await db.collection('gameSessions').doc(currentSessionId).collection('players').get();
+            const ids = snap.docs.map(d=>d.id).sort(()=>Math.random()-0.5); // Acak urutan ID
+            
+            // 2. DATA NAMA TIM & WARNA (Hingga 8 Kelompok)
+            const teamNames = ['MERAH','BIRU','HIJAU','KUNING','UNGU','ORANYE','HITAM','PUTIH'];
+            const teamColors = ['#e74c3c','#3498db','#2ecc71','#f1c40f','#9b59b6','#e67e22','#34495e','#ecf0f1'];
+            
+            const batch = db.batch();
+            
+            // 3. BAGI RATA SESUAI PILIHAN
+            ids.forEach((uid, i) => {
+                const grpIdx = i % teamCount; // Modulo sesuai jumlah kelompok
+                batch.update(db.collection('gameSessions').doc(currentSessionId).collection('players').doc(uid), {
+                    groupName: teamNames[grpIdx],
+                    groupColor: teamColors[grpIdx]
+                });
+            });
+            
+            await batch.commit();
+            
+            if(isFromStudent) {
+                // Matikan trigger setelah selesai
+                await db.collection('gameSessions').doc(currentSessionId).update({ triggerShuffle: false, shufflerId: null });
+                alert(`Siswa berhasil mengacak menjadi ${teamCount} kelompok!`);
+            }
+        }
+
+        async function startGame() {
+            await db.collection('gameSessions').doc(currentSessionId).update({ status: 'playing' });
+            switchPanel('panel-game');
+            renderQ();
+        }
+
+        function renderQ() {
+            const q = questions[currentQIndex];
+            document.getElementById('q-number').textContent = currentQIndex+1;
+            document.getElementById('q-text').textContent = q.text;
+            document.getElementById('q-options').innerHTML = q.options.map((o,i)=>`<div>${['A','B','C','D'][i]}. ${o}</div>`).join('');
+        }
+
+        async function openAnswers() {
+            document.getElementById('btn-open').disabled = true;
+            document.getElementById('btn-close').disabled = false;
+            
+            // AUDIO COUNTDOWN
+            const aud = document.getElementById('sfx-countdown');
+            if(aud) { aud.currentTime=0; aud.play().catch(e=>console.log(e)); }
+
+            await db.collection('gameSessions').doc(currentSessionId).update({ roundStatus: 'open' });
+            
+            let t = 15;
+            document.getElementById('game-timer').textContent = t;
+            timerInterval = setInterval(()=>{
+                t--; document.getElementById('game-timer').textContent = t;
+                if(t<=0) closeAnswers();
+            }, 1000);
+        }
+
+        async function closeAnswers() {
+            clearInterval(timerInterval);
+            document.getElementById('game-timer').textContent = "STOP";
+            document.getElementById('btn-open').disabled = false;
+            document.getElementById('btn-close').disabled = true;
+            
+            const aud = document.getElementById('sfx-countdown');
+            if(aud) { aud.pause(); aud.currentTime=0; }
+
+            await db.collection('gameSessions').doc(currentSessionId).update({ roundStatus: 'closed' });
+            checkAnswers();
+        }
+
+        // LOGIKA KEKOMPAKAN (SATU BEDA = SEMUA SALAH)
+        async function checkAnswers() {
+            const q = questions[currentQIndex];
+            const snap = await db.collection('gameSessions').doc(currentSessionId).collection('players').get();
+            const batch = db.batch();
+            
+            const teams = {};
+            snap.forEach(d => {
+                const p = d.data();
+                if(p.groupName) {
+                    if(!teams[p.groupName]) teams[p.groupName] = [];
+                    teams[p.groupName].push({ ref: d.ref, ans: p.currentAnswer });
+                }
+            });
+
+            let report = "HASIL:\n";
+            for(const [name, members] of Object.entries(teams)) {
+                if(members.length===0) continue;
+                const firstAns = members[0].ans;
+                const allAnswered = members.every(m => m.ans !== null && m.ans !== undefined);
+                const allSame = members.every(m => m.ans === firstAns);
+                const isCorrect = firstAns === q.key;
+
+                if(allAnswered && allSame && isCorrect) {
+                    report += `✅ ${name}: BENAR (+100)\n`;
+                    members.forEach(m => batch.update(m.ref, {
+                        score: firebase.firestore.FieldValue.increment(100),
+                        lastAnswerStatus: 'correct', triggerTime: firebase.firestore.FieldValue.serverTimestamp(), currentAnswer: null
+                    }));
+                } else {
+                    report += `❌ ${name}: SALAH/TDK KOMPAK\n`;
+                    members.forEach(m => batch.update(m.ref, {
+                        lastAnswerStatus: 'wrong', triggerTime: firebase.firestore.FieldValue.serverTimestamp(), currentAnswer: null
+                    }));
+                }
+            }
+            await batch.commit();
+            alert(report);
+        }
+
+        async function nextQuestion() {
+            if(currentQIndex < questions.length-1) {
+                currentQIndex++;
+                await db.collection('gameSessions').doc(currentSessionId).update({ currentQuestionIndex:currentQIndex, roundStatus:'closed'});
+                renderQ();
+            } else alert("Soal Habis!");
+        }
+
+        async function endGame() {
+            if(confirm("Akhiri sesi?")) {
+                await db.collection('gameSessions').doc(currentSessionId).update({ status:'finished' });
+                window.location.href = 'index.html';
+            }
+        }
+
+        function switchPanel(id) {
+            document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+    </script>
+</body>
+</html>

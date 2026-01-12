@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Assignment Center</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #007AFF;
+            --accent: #5856D6; 
+            --drive-color: #1EA362;
+            --bg-color: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text-main: #1C1C1E;
+        }
+
+        body {
+            margin: 0; padding: 0; font-family: 'Outfit', sans-serif;
+            background: var(--bg-color); color: var(--text-main);
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        /* HEADER */
+        .header {
+            padding: 20px; background: rgba(255,255,255,0.85); backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .header h1 { margin: 0; font-size: 1.4em; font-weight: 800; }
+        .back-btn {
+            background: #E5E5EA; width: 40px; height: 40px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; text-decoration: none;
+            color: var(--text-main); font-size: 1.1em; transition: 0.2s;
+        }
+        .back-btn:active { transform: scale(0.9); }
+
+        .container { flex: 1; overflow-y: auto; padding: 20px; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+        .section-title { font-size: 0.85em; font-weight: 700; color: #8E8E93; margin: 20px 0 10px 0; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* CARD TUGAS */
+        .task-card {
+            background: var(--card-bg); border-radius: 20px; padding: 20px; margin-bottom: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03); cursor: pointer; position: relative;
+            transition: transform 0.2s; border: 1px solid transparent;
+        }
+        .task-card:active { transform: scale(0.98); }
+        .task-title { font-size: 1.1em; font-weight: 700; margin: 0 0 5px 0; }
+        .task-meta { font-size: 0.85em; color: #8E8E93; display: flex; align-items: center; gap: 5px; }
+
+        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 8px; font-size: 0.75em; font-weight: 700; margin-top: 10px; }
+        .st-todo { background: #FFF4E5; color: #FF9500; }
+        .st-done { background: #E8F5E9; color: #34C759; }
+        .st-late { background: #FFEBEE; color: #FF3B30; }
+
+        /* MODAL */
+        #submission-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
+            z-index: 200; display: none; justify-content: center; align-items: flex-end;
+        }
+        .modal-card {
+            background: #fff; width: 100%; max-width: 600px; height: 95vh;
+            border-top-left-radius: 30px; border-top-right-radius: 30px;
+            padding: 30px 25px; box-sizing: border-box; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            overflow-y: auto; display: flex; flex-direction: column;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        /* INSTRUKSI */
+        .teacher-section {
+            background: #F2F2F7; border-radius: 15px; padding: 20px; margin: 15px 0;
+            border-left: 5px solid var(--accent);
+        }
+        .teacher-label { font-size: 0.8em; font-weight: 700; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; display: block; }
+        
+        .task-desc { font-size: 0.95em; line-height: 1.6; color: #333; white-space: pre-wrap; word-wrap: break-word; }
+        .task-desc a { color: var(--primary); font-weight: bold; text-decoration: underline; }
+
+        /* TOMBOL FOLDER PENGUMPULAN (UTAMA) - INI YANG KITA PERBAIKI */
+        .folder-btn {
+            display: flex; align-items: center; gap: 15px;
+            background: #E8F5E9; border: 1px solid #C8E6C9; color: #1B5E20;
+            padding: 15px; border-radius: 15px; text-decoration: none;
+            margin-top: 15px; transition: 0.2s; position: relative; overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer;
+        }
+        .folder-btn:active { transform: scale(0.98); }
+        .folder-btn i.main-icon { font-size: 1.8em; color: var(--drive-color); }
+        
+        /* INPUT SISWA */
+        .student-section { margin-top: 20px; padding-top: 20px; border-top: 1px dashed #ddd; }
+        .input-label { font-weight: 700; font-size: 0.9em; margin-bottom: 8px; display: block; }
+        .input-box {
+            width: 100%; padding: 15px; background: #fff; border: 2px solid #E5E5EA;
+            border-radius: 15px; font-size: 1em; box-sizing: border-box; outline: none;
+            transition: 0.2s; font-family: inherit;
+        }
+        .input-box:focus { border-color: var(--primary); }
+
+        .btn-submit {
+            background: var(--primary); color: white; border: none; padding: 16px;
+            width: 100%; border-radius: 15px; font-weight: 700; font-size: 1.1em;
+            margin-top: 20px; cursor: pointer; box-shadow: 0 8px 20px rgba(0,122,255,0.3);
+            transition: transform 0.2s;
+        }
+        .btn-submit:active { transform: scale(0.98); }
+
+        .close-modal-btn { background: #F2F2F7; border: none; width: 35px; height: 35px; border-radius: 50%; color: #8E8E93; font-size: 1.2em; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="index.html" class="back-btn"><i class="fa-solid fa-chevron-left"></i></a>
+        <h1>Tugas Saya</h1>
+        <div style="width:40px;"></div>
+    </div>
+
+    <div class="container" id="task-container">
+        <div style="text-align:center; margin-top:40px; color:#aaa;">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Memuat Data...
+        </div>
+    </div>
+
+    <div id="submission-modal">
+        <div class="modal-card">
+            
+            <div style="display:flex; justify-content:space-between; align-items:start;">
+                <div>
+                    <h2 id="m-title" style="margin:0; font-size:1.4em; line-height:1.2;">...</h2>
+                    <p id="m-deadline" style="margin:5px 0 0 0; color:#FF3B30; font-size:0.9em; font-weight:600;">...</p>
+                </div>
+                <button class="close-modal-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="teacher-section">
+                <span class="teacher-label"><i class="fa-solid fa-circle-info"></i> Instruksi:</span>
+                <div id="m-desc" class="task-desc">...</div>
+            </div>
+
+            <div id="submission-folder-area" style="display:none; margin-bottom:20px;">
+                <span class="teacher-label" style="color:#1B5E20; margin-top:15px;"><i class="fa-solid fa-folder-open"></i> Link Dari Guru:</span>
+                
+                <a id="btn-drive-folder" href="#" target="_blank" class="folder-btn">
+                    <i id="icon-link-type" class="fa-solid fa-link main-icon"></i>
+                    <div class="folder-info">
+                        <strong id="label-link-type">Buka Tautan Guru</strong>
+                        <small>Klik untuk membuka link/folder tugas</small>
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="margin-left:auto; opacity:0.5;"></i>
+                </a>
+            </div>
+
+            <div id="form-area" class="student-section">
+                <span class="input-label">Jawaban Kamu:</span>
+                <p style="font-size:0.85em; color:#666; margin-top:-5px; margin-bottom:15px; line-height:1.4;">
+                    1. Upload tugasmu ke link di atas (jika ada).<br>
+                    2. Atau upload ke Drive pribadimu.<br>
+                    3. <b>Paste link-nya di kotak bawah ini.</b>
+                </p>
+                
+                <input type="url" id="inp-link" class="input-box" placeholder="Tempel link jawaban di sini...">
+                
+                <button id="btn-submit" class="btn-submit" onclick="submitTask()">
+                    <i class="fa-solid fa-paper-plane"></i> KIRIM BUKTI
+                </button>
+            </div>
+
+            <div id="done-area" class="student-section" style="display:none; text-align:center;">
+                <div style="background:#E8F5E9; padding:30px; border-radius:20px; color:#2E7D32;">
+                    <i class="fa-solid fa-circle-check" style="font-size:3em; margin-bottom:10px;"></i>
+                    <h3 style="margin:0;">Selesai!</h3>
+                    <p>Tugas sudah dikirim.</p>
+                    <div style="font-size:1.2em; font-weight:bold; margin-top:10px;">
+                        Nilai: <span id="m-score">Menunggu</span>
+                    </div>
+                </div>
+                <a id="m-my-link" href="#" target="_blank" style="display:block; margin-top:15px; color:#007AFF; font-weight:600; text-decoration:none;">
+                    Lihat Jawaban Saya <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="assets/js/firebase-config.js"></script>
+
+    <script>
+        let currentUser = null;
+        let currentClassId = null;
+        let activeTaskId = null;
+        let activeTaskData = null;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoOpenId = urlParams.get('taskId');
+
+        firebase.auth().onAuthStateChanged(async (user) => {
+            if (!user) window.location.href = 'index.html';
+            currentUser = user;
+            const doc = await db.collection('users').doc(user.uid).get();
+            if (!doc.data().classId) { alert("Masuk kelas dulu!"); window.location.href='index.html'; return; }
+            currentClassId = doc.data().classId;
+            loadAssignments();
+        });
+
+        function loadAssignments() {
+            const container = document.getElementById('task-container');
+            db.collection('assignments')
+                .where('classId', '==', currentClassId)
+                .orderBy('deadline', 'desc')
+                .onSnapshot(async (snapshot) => {
+                    if(snapshot.empty) {
+                        container.innerHTML = `<div style="text-align:center; margin-top:50px; color:#999;">Tidak ada tugas aktif.</div>`;
+                        return;
+                    }
+
+                    const tasks = [];
+                    const promises = snapshot.docs.map(async doc => {
+                        const t = { id: doc.id, ...doc.data() };
+                        const sub = await db.collection('assignments').doc(doc.id).collection('submissions').doc(currentUser.uid).get();
+                        t.mySubmission = sub.exists ? sub.data() : null;
+                        return t;
+                    });
+
+                    const results = await Promise.all(promises);
+                    renderList(results);
+
+                    if (autoOpenId) {
+                        const target = results.find(t => t.id === autoOpenId);
+                        if (target) openModal(target);
+                    }
+                });
+        }
+
+        function renderList(tasks) {
+            const container = document.getElementById('task-container');
+            container.innerHTML = '';
+            
+            const pending = tasks.filter(t => !t.mySubmission);
+            const done = tasks.filter(t => t.mySubmission);
+
+            if (pending.length > 0) {
+                container.innerHTML += `<div class="section-title">HARUS DIKERJAKAN 🔥</div>`;
+                pending.forEach(t => container.appendChild(createCard(t)));
+            }
+            if (done.length > 0) {
+                container.innerHTML += `<div class="section-title">RIWAYAT ✅</div>`;
+                done.forEach(t => container.appendChild(createCard(t)));
+            }
+        }
+
+        function createCard(t) {
+            const div = document.createElement('div');
+            const deadline = t.deadline.toDate();
+            const isLate = new Date() > deadline;
+            const isDone = !!t.mySubmission;
+
+            let badge = isDone ? `<span class="status-badge st-done">Selesai</span>` : 
+                        (isLate ? `<span class="status-badge st-late">Telat</span>` : `<span class="status-badge st-todo">Kerjakan</span>`);
+
+            div.className = 'task-card';
+            div.innerHTML = `
+                <h3 class="task-title">${t.title}</h3>
+                <div class="task-meta"><i class="fa-regular fa-calendar"></i> ${deadline.toLocaleDateString('id-ID')}</div>
+                ${badge}
+            `;
+            div.onclick = () => openModal(t);
+            return div;
+        }
+
+        // === LOGIKA DETEKSI LINK (FIXED) ===
+        function openModal(task) {
+            activeTaskId = task.id;
+            activeTaskData = task;
+
+            document.getElementById('m-title').textContent = task.title;
+            document.getElementById('m-deadline').textContent = "Deadline: " + task.deadline.toDate().toLocaleString();
+            
+            // 1. FORMAT DESKRIPSI
+            let rawDesc = task.description || "Tidak ada instruksi khusus.";
+            let linkedDesc = rawDesc.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+            document.getElementById('m-desc').innerHTML = linkedDesc;
+
+            // 2. DETEKSI LINK "FOLDER PENGUMPULAN" (REVISI PENTING)
+            // Cek semua kemungkinan nama field di database!
+            // 'driveLink' adalah yang paling umum dipakai di teacher.js
+            let detectedLink = task.driveLink || task.submissionFolder || task.link || extractAnyLink(rawDesc);
+            
+            const folderArea = document.getElementById('submission-folder-area');
+            const btnLink = document.getElementById('btn-drive-folder');
+            const iconLink = document.getElementById('icon-link-type');
+            const labelLink = document.getElementById('label-link-type');
+
+            if (detectedLink && detectedLink.startsWith('http')) {
+                folderArea.style.display = 'block';
+                btnLink.href = detectedLink;
+
+                // Ubah Tampilan Sesuai Jenis Link
+                if (detectedLink.includes('drive.google') || detectedLink.includes('docs.google')) {
+                    iconLink.className = "fa-brands fa-google-drive main-icon";
+                    labelLink.textContent = "Buka Google Drive / Docs";
+                    btnLink.style.borderColor = "#C8E6C9"; btnLink.style.background = "#E8F5E9"; btnLink.style.color = "#1B5E20";
+                } else if (detectedLink.includes('youtube') || detectedLink.includes('youtu.be')) {
+                    iconLink.className = "fa-brands fa-youtube main-icon";
+                    labelLink.textContent = "Tonton Video Materi";
+                    btnLink.style.borderColor = "#ffcdd2"; btnLink.style.background = "#ffebee"; btnLink.style.color = "#c62828"; iconLink.style.color = "red";
+                } else {
+                    iconLink.className = "fa-solid fa-link main-icon";
+                    labelLink.textContent = "Buka Link Tautan";
+                    btnLink.style.borderColor = "#BBDEFB"; btnLink.style.background = "#E3F2FD"; btnLink.style.color = "#0D47A1"; iconLink.style.color = "#1976D2";
+                }
+            } else {
+                folderArea.style.display = 'none';
+            }
+
+            // 3. STATUS SUBMISSION
+            const formArea = document.getElementById('form-area');
+            const doneArea = document.getElementById('done-area');
+
+            if (task.mySubmission) {
+                formArea.style.display = 'none';
+                doneArea.style.display = 'block';
+                document.getElementById('m-score').textContent = task.mySubmission.score || "Belum Dinilai";
+                document.getElementById('m-my-link').href = task.mySubmission.link;
+            } else {
+                formArea.style.display = 'block';
+                doneArea.style.display = 'none';
+                document.getElementById('inp-link').value = '';
+            }
+
+            document.getElementById('submission-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('submission-modal').style.display = 'none';
+            window.history.replaceState({}, document.title, "tugas_siswa.html");
+        }
+
+        function extractAnyLink(text) {
+            if(!text) return null;
+            const match = text.match(/(https?:\/\/[^\s]+)/);
+            return match ? match[0] : null;
+        }
+
+        async function submitTask() {
+            const link = document.getElementById('inp-link').value.trim();
+            if(!link) return alert("Link bukti tugas harus diisi!");
+            
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true; btn.innerHTML = 'Mengirim...';
+
+            let score = activeTaskData.maxScore || 100;
+            let status = "On Time";
+            if(new Date() > activeTaskData.deadline.toDate()) {
+                score = Math.round(score * 0.85);
+                status = "Late";
+            }
+
+            try {
+                await db.collection('assignments').doc(activeTaskId).collection('submissions').doc(currentUser.uid).set({
+                    studentName: currentUser.displayName, studentId: currentUser.uid,
+                    link: link, submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    score: score, status: status
+                });
+                await db.collection('users').doc(currentUser.uid).update({
+                    totalScore: firebase.firestore.FieldValue.increment(score)
+                });
+                alert("Berhasil! +"+score+" XP");
+                closeModal();
+                btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> KIRIM BUKTI';
+            } catch(e) { alert("Error: " + e.message); }
+        }
+    </script>
+</body>
+</html>

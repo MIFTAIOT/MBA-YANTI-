@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Bersih Data Siswa</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        
+        .header { display: flex; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .back-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; margin-right: 15px; color: #555; }
+        h1 { margin: 0; font-size: 1.2em; color: #e74c3c; }
+        
+        .control-panel { background: #fff5f5; border: 1px solid #ffcccc; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; font-weight: bold; }
+        
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; }
+        .btn-primary { background: #333; color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-danger:hover { background: #c0392b; }
+
+        .student-list { max-height: 500px; overflow-y: auto; margin-top: 20px; }
+        .student-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; transition: 0.2s; }
+        .student-item:hover { background: #f9f9f9; }
+        
+        .badge-xp { background: #e3f2fd; color: #2196f3; padding: 2px 8px; border-radius: 5px; font-size: 0.8em; font-weight: bold; }
+        .delete-icon { color: #e74c3c; background: #fee; padding: 8px; border-radius: 5px; cursor: pointer; border: 1px solid #fcc; }
+
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #e74c3c; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="window.location.href='index.html'"><i class="fa-solid fa-arrow-left"></i></button>
+            <div>
+                <h1>Hapus Data Siswa</h1>
+                <small style="color:#666;">Khusus Mam Yanti</small>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <label style="font-weight:bold; display:block; margin-bottom:5px;">Pilih Kelas Target:</label>
+            <select id="class-select">
+                <option value="">-- Memuat Kelas... --</option>
+            </select>
+            <button class="btn btn-primary" onclick="loadStudents()">
+                <i class="fa-solid fa-magnifying-glass"></i> Tampilkan Siswa
+            </button>
+        </div>
+
+        <div id="result-area" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0;">Daftar Siswa (<span id="count">0</span>)</h3>
+                
+                <button onclick="nukeClass()" style="background:#c0392b; color:white; border:none; padding:5px 15px; border-radius:20px; font-size:0.8em; cursor:pointer;">
+                    <i class="fa-solid fa-bomb"></i> HAPUS SEMUA
+                </button>
+            </div>
+            
+            <div id="student-list-container" class="student-list">
+                </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="assets/js/firebase-config.js"></script>
+
+    <script>
+        // === LOGIKA HALAMAN ADMIN ===
+        
+        // 1. CEK APAKAH GURU? (KEAMANAN)
+        firebase.auth().onAuthStateChanged(async (user) => {
+            if (!user) {
+                alert("Anda belum login!");
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Cek Database apakah role == teacher
+            const doc = await db.collection('users').doc(user.uid).get();
+            if (!doc.exists || doc.data().role !== 'teacher') {
+                alert("⛔ AKSES DITOLAK: Halaman ini khusus Guru!");
+                window.location.href = 'index.html';
+            } else {
+                console.log("Akses Guru Diterima.");
+                loadClasses(); // Load dropdown kelas
+            }
+        });
+
+        // 2. LOAD DATA KELAS
+        async function loadClasses() {
+            const select = document.getElementById('class-select');
+            select.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+            
+            try {
+                const snap = await db.collection('classes').orderBy('name').get();
+                snap.forEach(doc => {
+                    const opt = document.createElement('option');
+                    opt.value = doc.id;
+                    opt.textContent = doc.data().name;
+                    select.appendChild(opt);
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        // 3. TAMPILKAN DAFTAR SISWA
+        async function loadStudents() {
+            const classId = document.getElementById('class-select').value;
+            const container = document.getElementById('student-list-container');
+            const resultArea = document.getElementById('result-area');
+            const countSpan = document.getElementById('count');
+
+            if(!classId) return alert("Pilih kelas dulu!");
+
+            container.innerHTML = '<div class="spinner"></div>';
+            resultArea.style.display = 'block';
+
+            try {
+                const snap = await db.collection('users')
+                    .where('role', '==', 'student')
+                    .where('classId', '==', classId)
+                    .orderBy('name')
+                    .get();
+
+                countSpan.textContent = snap.size;
+                container.innerHTML = '';
+
+                if(snap.empty) {
+                    container.innerHTML = '<p style="text-align:center; color:#999; margin-top:20px;">Kelas ini bersih/kosong.</p>';
+                    return;
+                }
+
+                snap.forEach(doc => {
+                    const s = doc.data();
+                    const div = document.createElement('div');
+                    div.className = 'student-item';
+                    div.innerHTML = `
+                        <div>
+                            <div style="font-weight:bold;">${s.name}</div>
+                            <span class="badge-xp">${s.totalScore || 0} XP</span>
+                        </div>
+                        <button class="delete-icon" onclick="deleteStudent('${doc.id}', '${s.name}')" title="Hapus Siswa Ini">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    `;
+                    container.appendChild(div);
+                });
+
+            } catch(e) {
+                console.error(e);
+                alert("Gagal memuat data: " + e.message);
+            }
+        }
+
+        // 4. HAPUS SATU SISWA
+        window.deleteStudent = async function(uid, name) {
+            if(!confirm(`Yakin ingin menghapus permanen siswa: ${name}?`)) return;
+
+            try {
+                await db.collection('users').doc(uid).delete();
+                // Refresh list tanpa reload halaman
+                loadStudents();
+            } catch(e) {
+                alert("Gagal hapus: " + e.message);
+            }
+        };
+
+        // 5. HAPUS SEMUA SISWA SATU KELAS (NUKE)
+        window.nukeClass = async function() {
+            const classId = document.getElementById('class-select').value;
+            const count = document.getElementById('count').textContent;
+
+            if(count == "0") return alert("Kelas sudah kosong.");
+
+            const confirm1 = confirm(`⚠️ BAHAYA!\nAnda akan menghapus ${count} siswa.\nData yang dihapus TIDAK BISA KEMBALI.\n\nLanjutkan?`);
+            if(!confirm1) return;
+
+            const code = prompt("Ketik 'SETUJU' untuk konfirmasi penghapusan massal:");
+            if(code !== 'SETUJU') return alert("Dibatalkan.");
+
+            const container = document.getElementById('student-list-container');
+            container.innerHTML = '<div class="spinner"></div><p style="text-align:center;">Menghapus data...</p>';
+
+            try {
+                // Ambil semua siswa lagi
+                const snap = await db.collection('users')
+                    .where('role', '==', 'student')
+                    .where('classId', '==', classId)
+                    .get();
+
+                // Hapus pakai Batch
+                const batch = db.batch();
+                snap.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+
+                await batch.commit();
+
+                alert("BERHASIL! Data kelas sudah bersih.");
+                loadStudents();
+
+            } catch(e) {
+                console.error(e);
+                alert("Error saat menghapus massal.");
+                loadStudents();
+            }
+        };
+    </script>
+</body>
+</html>

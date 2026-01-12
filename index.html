@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+
+<script>
+        // Cek apakah user sudah nonton intro di sesi ini?
+        if (!sessionStorage.getItem('sudahNontonIntro')) {
+            // Kalau belum, paksa pindah ke start.html
+            window.location.replace("start.html");
+        }
+    </script>
+
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>e-Learning English by Mam Yanti</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="assets/css/style.css">
+
+    <style>
+        /* Animasi Pop-up */
+        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 80% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
+        
+        /* Kartu Live Score Guru */
+        .live-score-card { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.03); transition: transform 0.3s ease; }
+        .live-score-card:hover { transform: scale(1.01); }
+        .score-left { display: flex; align-items: center; gap: 15px; }
+        .rank-circle { width: 40px; height: 40px; background: #f0f2f5; color: #666; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 800; font-size: 1.2em; }
+        .rank-circle.gold { background: #FFD700; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .rank-circle.silver { background: #C0C0C0; color: white; }
+        .rank-circle.bronze { background: #CD7F32; color: white; }
+        .student-info .name { font-weight: 600; color: #333; font-size: 1em; }
+        .status-row { margin-top: 2px; font-size: 0.8em; }
+        .badge-working { color: #e67e22; background: #fff3e0; padding: 2px 8px; border-radius: 10px; }
+        .badge-finished { color: #27ae60; background: #e8f5e9; padding: 2px 8px; border-radius: 10px; }
+        .score-right { text-align: center; }
+        .score-number { display: block; font-size: 1.4em; font-weight: 800; color: #6f42c1; line-height: 1; }
+        .score-label { font-size: 0.7em; color: #888; text-transform: uppercase; }
+
+        /* Style Game Kelompok v3.0 */
+        .team-display-box { padding:30px; border-radius:15px; margin:15px 0; color:white; font-weight:bold; font-size:2em; text-shadow:1px 1px 3px rgba(0,0,0,0.3); text-align: center; }
+        #student-lobby-chosen { animation: pulseBorder 2s infinite; }
+        @keyframes pulseBorder { 0% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(243, 156, 18, 0); } 100% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0); } }
+        
+        /* Tombol Pilihan Game yang Lebih Besar */
+        .game-buttons-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .game-big-btn { height: 120px; font-size: 1.2em; border-radius: 15px; border: none; color: white; font-weight: bold; cursor: pointer; transition: transform 0.1s; box-shadow: 0 5px 0 rgba(0,0,0,0.2); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 5px; }
+        .game-big-btn:active { transform: translateY(5px); box-shadow: none; }
+        .btn-A { background: #E24A4A; } .btn-B { background: #4A90E2; } .btn-C { background: #F5A623; } .btn-D { background: #28a745; }
+        .game-big-btn:disabled { opacity: 0.5; filter: grayscale(80%); cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <div id="sound-system" style="display:none;">
+        <audio id="sfx-countdown" src="assets/sounds/countdown.mp3" preload="auto"></audio>
+        <audio id="sfx-win" src="assets/sounds/win.mp3" preload="auto"></audio>
+        <audio id="sfx-lose" src="assets/sounds/lose.mp3" preload="auto"></audio>
+        <audio id="sfx-warning" src="assets/sounds/warning.wav" preload="auto"></audio>
+    </div>
+    
+    <div id="app-container">
+        
+        <div id="login-page" class="page active">
+            <div class="login-card">
+                <h1>e-Learning English</h1>
+                <h2>MBA Yanti</h2>
+                <p>Silakan masuk dengan Akun Google Anda untuk memulai pembelajaran.</p>
+                <button id="login-btn">
+                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
+                    <span>Masuk dengan Google</span>
+                </button>
+                <div class="spinner-container" style="display: none;" id="login-spinner">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="teacher-dashboard-page" class="page">
+            
+            <div id="teacher-main-menu" class="sub-page active">
+                <div class="header-info" style="background: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h1 id="teacher-welcome" style="font-size: 1.4em;">Hai, Mam Yanti!</h1>
+                        <button class="logout-btn" id="teacher-logout-btn" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></button>
+                    </div>
+                    <div id="live-clock-container" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-size: 0.9em; color: #666;">
+                            <i class="fa-regular fa-calendar"></i> <span id="live-day-date">...</span>
+                        </div>
+                        <div style="font-size: 1.2em; font-weight: 700; color: var(--primary-color);">
+                            <i class="fa-regular fa-clock"></i> <span id="live-time">00:00:00</span>
+                        </div>
+                    </div>
+                    <div id="class-timer-panel" style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; text-align: center;">
+                        <span style="display: block; font-size: 0.8em;">Sisa Waktu Pembelajaran:</span>
+                        <span id="countdown-display" style="font-size: 1.8em; font-weight: 800; letter-spacing: 2px;">00:00:00</span>
+                    </div>
+                </div>
+
+                <div class="feature-card" id="start-teaching-card">
+                    <h3><i class="fa-solid fa-hourglass-start"></i> Mulai Mengajar (Set Timer)</h3>
+                    <p style="font-size: 0.9em; margin-bottom: 10px;">Pilih kelas dan atur waktu selesai. Countdown akan muncul di HP siswa.</p>
+                    <label style="font-size: 0.9em;">Pilih Kelas:</label>
+                    <select id="timer-class-target" style="margin-bottom: 10px;"><option value="">-- Pilih Kelas --</option></select>
+                    
+                    <label style="font-size: 0.9em;">Kelas Selesai Pukul (Format 24 Jam):</label>
+                    <input type="text" id="session-end-time-input" placeholder="Contoh: 13:30" maxlength="5" style="font-size: 1.2em; font-weight: bold; text-align: center; letter-spacing: 2px; margin-bottom: 10px;">
+                    <small style="color:#666; font-size:0.8em; display:block; margin-bottom:10px;">*Gunakan tanda titik dua ( : ) atau titik ( . ) sebagai pemisah.</small>
+
+                    <button class="primary" id="start-timer-btn" style="background-color: var(--answer-green);">Mulai Countdown & Sinkron ke Siswa</button>
+                </div>
+                
+                <div class="feature-card">
+                    <h3><i class="fa-solid fa-star" style="color: #F5A623;"></i> Manajemen Poin & Ranking</h3>
+                    <button class="secondary" id="go-to-points-page-btn">Buka Manajemen Poin</button>
+                </div>
+                <div class="feature-card">
+                    <h3><i class="fa-solid fa-chalkboard-user"></i> Manajemen Kelas</h3>
+                    <input type="text" id="class-name-input" placeholder="Nama Kelas Baru (Cth: XII-1)">
+                    <button class="primary" id="create-class-btn">Buat Kelas Baru</button>
+                    <h3 style="margin-top: 20px;"><i class="fa-solid fa-list-ul"></i> Daftar Kelas & Kode</h3>
+                    <div id="class-code-list" class="content-list"><div class="spinner-container"><div class="spinner"></div></div></div>
+                </div>
+
+                
+                
+                <div class="feature-card">
+                    <h3><i class="fa-solid fa-puzzle-piece"></i> Manajemen Kuis (Individu)</h3>
+                    <button class="primary" id="go-to-quiz-btn">Buka Manajemen Kuis</button>
+                </div>
+                
+             <div class="feature-card" style="border-left: 5px solid #F5A623;">
+    <h3 style="color:#d35400;"><i class="fa-solid fa-users-rays"></i> Game Kelompok</h3>
+    <p style="font-size:0.9em; color:#666; margin-bottom:10px;">Buka Command Center untuk mengatur permainan.</p>
+    
+    <a href="game_kelompok_guru.html" class="primary" style="background-color: #F5A623; display:block; text-align:center; text-decoration:none; padding:12px; border-radius:8px; color:white; font-weight:bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <i class="fa-solid fa-gamepad"></i> BUKA COMMAND CENTER
+    </a>
+</div>
+
+
+<div class="feature-card" style="border-left: 5px solid #E91E63;">
+                    <h3 style="color: #E91E63;"><i class="fa-solid fa-hand-back-fist"></i> Digital Hand (Adu Cepat)</h3>
+                    <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
+                        Buzzer untuk kuis lisan atau rebutan.
+                    </p>
+                    
+                    <a href="raise_hand.html" target="_blank" class="primary" style="background-color: #E91E63; display:block; text-align:center; text-decoration:none; padding:12px; border-radius:8px; color:white; font-weight:bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Buka Panel Adu Cepat
+                    </a>
+                </div>
+
+
+             <div class="feature-card">
+    <h3><i class="fa-solid fa-comments"></i> Chat Kelas</h3>
+    <p style="font-size:0.9em; color:#666; margin-bottom:10px;">Diskusi seru dengan teman sekelas.</p>
+    
+    <a href="chat_kelas.html" class="primary" style="background-color: #075e54; display:block; text-align:center; text-decoration:none; padding:12px; border-radius:8px; color:white; font-weight:bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <i class="fa-solid fa-paper-plane"></i> Buka Chat
+    </a>
+</div>
+                <div class="feature-card">
+                    <h3><i class="fa-solid fa-file-pen"></i> Manajemen Tugas</h3>
+                    <button class="primary" id="go-to-create-task-btn">Buat Slot Tugas Baru</button>
+                    <h3 style="margin-top: 20px;"><i class="fa-solid fa-list-ul"></i> Daftar Tugas Aktif</h3>
+                    <div id="teacher-assignment-list" class="content-list"><div class="spinner-container"><div class="spinner"></div></div></div>
+                </div>
+          <div class="feature-card" style="border-left: 5px solid #007bff;">
+    <h3 style="color: #007bff;"><i class="fa-solid fa-microphone-lines"></i> Speaking AI</h3>
+    <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">Tes pronunciation siswa dengan AI.</p>
+    <button class="primary" id="go-to-speaking-admin-btn" style="background-color: #007bff;">Kelola Speaking</button>
+</div>
+
+                <div class="feature-card" style="border: 1px solid #6f42c1;">
+                    <h3 style="color: #6f42c1;"><i class="fa-solid fa-headphones"></i> Listening (Isi Rumpang)</h3>
+                    <button class="primary" id="go-to-listening-admin-btn" style="background-color: #6f42c1;">Kelola Soal Listening</button>
+                </div>
+                <div class="feature-card">
+                    <h3><i class="fa-solid fa-bullhorn"></i> Buat Pengumuman</h3>
+                    <button class="primary" id="go-to-announcements-btn">Buka Manajemen Pengumuman</button>
+                </div>
+                <div class="feature-card">
+                    <h3><i class="fa-solid fa-cloud-arrow-up"></i> Upload Materi</h3>
+                    <button class="primary" id="go-to-materials-btn">Buka Manajemen Materi</button>
+                </div>
+                <div class="feature-card">
+                    <h3><i class="fa-solid fa-clipboard-user"></i> Rekap Absensi Siswa</h3>
+                    <button class="primary" id="go-to-attendance-btn">Buka Rekap Absensi</button>
+                </div>
+                <div class="feature-card" style="border: 1px solid var(--answer-red);">
+                    <h3 style="color: var(--answer-red);"><i class="fa-solid fa-power-off"></i> Feedback & Akhiri Kelas</h3>
+                    <button class="primary" id="end-session-btn" style="background-color: var(--answer-red);">Akhiri Sesi & Minta Feedback</button>
+                    <button class="secondary" id="go-to-feedback-results-btn" style="margin-top: 10px;">Lihat Hasil Feedback</button>
+                </div>
+                <div class="feature-card" style="border: 1px solid #28a745;">
+                    <h3 style="color: #28a745;"><i class="fa-solid fa-file-excel"></i> Rekap Nilai (Gradebook)</h3>
+                    <button class="primary" id="go-to-gradebook-btn" style="background-color: #28a745;">Buka Gradebook</button>
+                </div>
+            </div>
+            
+            <div id="teacher-points-page" class="sub-page"><div class="header"><button class="back-btn" data-target="teacher-main-menu"><i class="fa-solid fa-arrow-left"></i></button><h1>Poin & Ranking</h1></div><div class="leaderboard-tabs"><button class="active" id="t-tab-points" onclick="switchTeacherPointTab('points')">Beri Poin</button><button id="t-tab-rank" onclick="switchTeacherPointTab('rank')">Lihat Ranking</button></div><div id="t-content-points"><div class="feature-card"><h3>Beri Poin Manual</h3><select id="points-class-select"><option value="">-- Pilih Kelas --</option></select><div id="student-list-for-points" class="content-list" style="margin-top:15px; max-height:400px;"></div></div></div><div id="t-content-rank" style="display:none;"><div class="feature-card"><h3>Leaderboard (Top 50)</h3><div id="teacher-rank-list" class="content-list"></div></div></div></div>
+            <div id="teacher-gradebook-page" class="sub-page"><div class="header"><button class="back-btn" data-target="teacher-main-menu"><i class="fa-solid fa-arrow-left"></i></button><h1>Rekap Nilai Siswa</h1></div><div class="feature-card"><h3>Filter Kelas</h3><select id="gradebook-class-select" style="margin-bottom: 15px;"><option value="">-- Pilih Kelas --</option></select><div style="display: flex; gap: 10px; margin-bottom: 10px;"><button class="primary" id="refresh-gradebook-btn" style="flex: 1;"><i class="fa-solid fa-rotate-right"></i> Refresh</button><button class="primary" id="export-excel-btn" style="background-color: #217346; flex: 1;" disabled><i class="fa-solid fa-file-excel"></i> Download Excel</button></div></div><div class="feature-card"><h3>Data Nilai</h3><div style="overflow-x: auto;"><table id="gradebook-table" style="width: 100%; border-collapse: collapse; font-size: 0.9em;"><thead><tr style="background: #f8f9fa; text-align: left; border-bottom: 2px solid #ddd;"><th style="padding: 10px; border: 1px solid #eee;">No</th><th style="padding: 10px; border: 1px solid #eee;">Nama Siswa</th><th style="padding: 10px; border: 1px solid #eee; text-align:center;">Total Hadir</th><th style="padding: 10px; border: 1px solid #eee;">Total XP</th><th style="padding: 10px; border: 1px solid #eee;">Rank</th></tr></thead><tbody id="gradebook-tbody"><tr><td colspan="5" style="text-align:center; padding:20px;">Pilih kelas dulu ya, Mam!</td></tr></tbody></table></div></div></div>
+           <div id="teacher-task-page" class="sub-page">
+    <div class="header">
+        <button class="back-btn" data-target="teacher-main-menu"><i class="fa-solid fa-arrow-left"></i></button>
+        <h1>Manajemen Tugas</h1>
+    </div>
+
+    <div class="feature-card">
+        <h3>Kelola Tugas Siswa</h3>
+        <p>Klik tombol di bawah untuk membuat tugas baru (Google Drive Link).</p>
+        
+        <button class="primary" id="open-assignment-modal-btn" style="background-color: var(--primary-color);">
+            <i class="fa-solid fa-plus-circle"></i> Buat Tugas Baru
+        </button>
+    </div>
+
+    <div id="teacher-view-submissions-div" class="feature-card" style="display:none;">
+        <h3 id="submission-list-title">...</h3>
+        <div id="submission-list-container" class="content-list"></div>
+    </div>
+</div>
+            <div id="teacher-announcement-page" class="sub-page"><div class="header"><button class="back-btn" data-target="teacher-main-menu"><i class="fa-solid fa-arrow-left"></i></button><h1>Pengumuman</h1></div><div class="feature-card"><h3>Buat Pengumuman</h3><input type="text" id="announcement-title" placeholder="Judul"><textarea id="announcement-content" rows="3" placeholder="Isi..."></textarea><select id="announcement-class-target"><option value="">-- Pilih Kelas --</option></select><button class="primary" id="publish-announcement-btn">Publikasikan</button></div><div class="feature-card"><h3>Riwayat</h3><div id="teacher-announcement-list" class="content-list"></div></div></div>
+    <div id="teacher-material-page" class="sub-page">
+    <div class="header">
+        <button class="back-btn" data-target="teacher-main-menu">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <h1>Bank Materi</h1>
+    </div>
+
+    <div class="feature-card" style="border-left: 5px solid #E91E63;">
+        <h3><i class="fa-solid fa-plus-circle"></i> Tambah Materi Baru</h3>
+        
+        <label>Judul Materi:</label>
+        <input type="text" id="mat-title" placeholder="Contoh: Modul Chapter 1 / Video Tenses">
+        
+        <label>Link Materi (URL):</label>
+        <div style="display:flex; gap:5px;">
+            <input type="url" id="mat-url" placeholder="Tempel Link YouTube / GDrive / Canva di sini..." style="flex-grow:1;">
+            <button onclick="navigator.clipboard.readText().then(t => document.getElementById('mat-url').value = t)" style="background:#eee; color:#333; border:1px solid #ccc; width:40px;" title="Paste"><i class="fa-solid fa-paste"></i></button>
+        </div>
+        <small style="color:#666;">Bisa link YouTube, PDF Google Drive, Canva, atau Website.</small>
+
+        <label style="margin-top:10px;">Target Kelas:</label>
+        <select id="material-class-target">
+            <option value="">-- Pilih Kelas --</option>
+        </select>
+
+        <button class="primary" id="btn-save-material" onclick="saveSmartMaterial()" style="margin-top:15px; background-color: #E91E63; width:100%;">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Simpan Materi
+        </button>
+    </div>
+
+    <div class="feature-card">
+        <h3><i class="fa-solid fa-folder-open"></i> Daftar Materi Tersimpan</h3>
+        <div id="teacher-material-list" class="content-list">
+            <div class="spinner"></div>
+        </div>
+    </div>
+</div>
+
+
+            <div id="teacher-attendance-page" class="sub-page"><div class="header"><button class="back-btn" data-target="teacher-main-menu"><i class="fa-solid fa-arrow-left"></i></button><h1>Rekap Absensi</h1></div><div class="feature-card"><h3>Pilih Kelas & Tanggal</h3><input type="date" id="attendance-recap-date"><select id="attendance-recap-class"><option value="">-- Pilih Kelas --</option></select><button class="primary" id="view-attendance-btn">Tampilkan</button><div id="attendance-recap-list" class="content-list" style="margin-top: 15px;"></div></div></div>
+            <div id="teacher-chat-page" class="sub-page"><div class="header"><button class="back-btn" data-target="teacher-main-menu"><i class="fa-solid fa-arrow-left"></i></button><h1>Chat Kelas</h1></div><div class="feature-card" style="margin-bottom: 15px;"><select id="chat-class-select-teacher"><option value="">-- Pilih Kelas --</option></select></div><div class="chat-page-container"><div class="chat-messages" id="chat-messages-teacher"></div><div class="chat-input-area"><input type="text" id="chat-input-teacher" placeholder="Ketik pesan..." disabled><button id="send-chat-btn-teacher" class="primary" disabled><i class="fa-solid fa-paper-plane"></i></button></div></div></div>
+            
+            <div id="teacher-quiz-page" class="sub-page">
+                <div class="header"><button class="back-btn" data-target="teacher-main-menu"><i class="fa-solid fa-arrow-left"></i></button><h1>Manajemen Kuis (Ujian)</h1></div>
+                <div class="feature-card" style="border-left: 5px solid #6f42c1;"><h3><i class="fa-solid fa-upload"></i> Upload Bank Soal (.txt)</h3><p style="font-size:0.9em; color:#666; margin-bottom:10px;">Format: <b>Q:</b> Pertanyaan... <b>A:</b> Opsi... <b>KEY:</b> A (Enter 2x antar soal).</p><input type="text" id="quiz-title-input" placeholder="Judul Kuis (Misal: Ujian Harian 1)"><input type="file" id="quiz-file-upload" accept=".txt" style="margin-top:10px;"><button class="primary" id="upload-quiz-txt-btn" style="margin-top:10px;">Upload & Simpan</button></div>
+                <div class="feature-card"><h3><i class="fa-solid fa-play"></i> Mulai Ujian Live</h3><label style="font-weight:bold; font-size:0.9em;">Pilih Bank Soal:</label><select id="quiz-select-list" style="margin-bottom:10px; width: 100%; padding: 8px;"><option value="">-- Loading Soal... --</option></select><label style="font-weight:bold; font-size:0.9em;">Pilih Kelas:</label><select id="quiz-class-target" style="margin-bottom:10px; width: 100%; padding: 8px;"><option value="">-- Loading Kelas... --</option></select><button class="primary" id="start-quiz-session-btn" style="background-color: var(--answer-green); width: 100%; margin-top:10px;"><i class="fa-solid fa-rocket"></i> Buat Room & PIN</button></div>
+                <div class="feature-card"><h3><i class="fa-solid fa-list"></i> Daftar Bank Soal Tersimpan</h3><div id="quiz-list-container" class="content-list"><div class="spinner-container"><div class="spinner"></div></div></div></div>
+            </div>
+            <div id="teacher-quiz-lobby-page" class="sub-page"><div class="header"><button class="back-btn" data-target="teacher-quiz-page"><i class="fa-solid fa-arrow-left"></i></button><h1>Lobi Kuis: <span id="lobby-quiz-title-teacher">...</span></h1></div><div class="feature-card" style="text-align: center;"><h3>PIN Kuis</h3><h1 id="lobby-pin-display" style="font-size: 4em; color: var(--primary-color); letter-spacing: 5px;">...</h1><p>Kelas: <strong id="lobby-class-target-teacher">...</strong></p></div><div class="feature-card"><h3>Siswa (<span id="lobby-player-count-teacher">0</span>)</h3><div id="lobby-player-list-teacher" class="lobby-player-list-container"></div></div><button class="primary" id="start-quiz-game-btn">Mulai Ujian Sekarang!</button></div>
+            <div id="teacher-quiz-game-page" class="sub-page"><div class="quiz-game-page"><div class="quiz-game-header"><h2 id="teacher-leaderboard-quiz-title">...</h2><p>Live Leaderboard</p></div><div id="teacher-leaderboard-container" class="leaderboard-container"></div><button class="primary" id="finish-quiz-session-btn" style="background-color: var(--danger-color);">Akhiri Sesi Ujian</button></div></div>
+            
+            <div id="teacher-game-page" class="sub-page">
+                <div class="header">
+                    <button class="back-btn" data-target="teacher-main-menu"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h1>Game Kelompok</h1>
+                </div>
+
+                <div id="panel-game-setup" class="feature-card">
+                    <h3><i class="fa-solid fa-gear"></i> Persiapan Game</h3>
+                    
+                    <label style="font-weight:bold;">1. Pilih Kelas:</label>
+                    <select id="game-class-select-final" style="width:100%; margin-bottom:15px; padding:10px;">
+                        <option value="">-- Loading Kelas... --</option>
+                    </select>
+
+                    <div style="background:#e3f2fd; padding:15px; border-radius:10px; border:1px dashed #2196F3;">
+                        <label style="font-weight:bold; color:#1565c0;">2. Upload Soal (.txt)</label>
+                        <p style="font-size:0.8em; margin-bottom:5px;">Format: Soal: ... A: ... Jawaban: A</p>
+                        <input type="file" id="game-file-upload-final" accept=".txt">
+                        <div id="game-upload-status" style="display:none; color:green; font-weight:bold; margin-top:5px;">
+                            <i class="fa-solid fa-check"></i> <span id="game-q-count">0</span> Soal Terbaca!
+                        </div>
+                    </div>
+
+                    <button class="primary" id="btn-create-lobby-final" style="margin-top:20px; background:#F5A623;">
+                        <i class="fa-solid fa-play"></i> Buka Lobby Game
+                    </button>
+                </div>
+
+                <div id="panel-game-lobby" class="feature-card" style="display:none;">
+                    <div style="text-align:center;">
+                        <p style="margin:0;">Kode Room:</p>
+                        <h1 id="lbl-game-pin" style="font-size:3.5em; color:var(--primary-color); letter-spacing:5px; margin:0;">...</h1>
+                        <div style="background:#eee; display:inline-block; padding:5px 15px; border-radius:20px; margin-top:10px;">
+                            Kelas: <strong id="lbl-game-class-name">...</strong>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px;">
+                        <div style="border:1px solid #ddd; padding:10px; border-radius:10px;">
+                            <h4>Siswa (<span id="lbl-player-count">0</span>)</h4>
+                            <div id="list-game-players" class="content-list" style="height:150px;"></div>
+                        </div>
+                        <div style="background:#fff3cd; padding:10px; border-radius:10px;">
+                            <h4><i class="fa-solid fa-users"></i> Bagi Tim</h4>
+                            <select id="sel-team-count" style="width:100%; margin-bottom:5px;">
+                                <option value="2">2 Tim</option><option value="3">3 Tim</option>
+                                <option value="4">4 Tim</option><option value="5">5 Tim</option>
+                            </select>
+                            <button class="secondary" id="btn-shuffle-teams" style="width:100%; font-size:0.9em;">Acak Tim</button>
+                            <div style="text-align:center; margin: 10px 0; font-size:0.8em;">-- ATAU --</div>
+
+<button class="secondary" id="allow-student-randomize-btn" style="width:100%; background:white; border:1px solid #d35400; color:#d35400;">
+    <i class="fa-solid fa-user-tag"></i> Tunjuk Siswa Acak
+</button>
+
+<div id="student-randomize-prompt" style="display:none; text-align:center; margin-top:10px; background:#e3f2fd; padding:5px; border-radius:5px;">
+    Menunggu <strong id="student-to-randomize-name">...</strong> mengacak tim.
+</div>
+                        </div>
+                    </div>
+
+                    <button class="primary" id="btn-start-game-final" style="margin-top:20px; background:var(--success-color);">
+                        MULAI GAME SEKARANG
+                    </button>
+                </div>
+
+                <div id="panel-game-running" class="feature-card" style="display:none; text-align:center;">
+                    <h2 style="color:var(--primary-color);">GAME BERLANGSUNG</h2>
+                    <div style="font-size:4em; font-weight:bold; margin:20px 0;" id="lbl-game-timer">STOP</div>
+                    
+                    <div style="display:flex; gap:10px; justify-content:center;">
+                        <button class="primary" id="btn-open-answer" style="background:var(--success-color);">BUKA JAWABAN</button>
+                        <button class="primary" id="btn-close-answer" style="background:var(--danger-color);" disabled>STOP</button>
+                    </div>
+
+                    <h3 style="margin-top:20px;">Skor Sementara</h3>
+                    <div id="list-game-leaderboard" class="content-list" style="height:200px;"></div>
+                    
+                    <button class="secondary" id="btn-end-game" style="margin-top:20px;">Akhiri Sesi</button>
+                </div>
+            </div>
+
+          
+
+            <div id="teacher-listening-page" class="sub-page">
+    <div class="header">
+        <button class="back-btn" data-target="teacher-main-menu">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <h1>Bank Soal Listening</h1>
+    </div>
+
+    <div class="feature-card" style="background: #e3f2fd; border: 1px dashed #2196F3;">
+        <h3 style="color: #1565c0;"><i class="fa-solid fa-robot"></i> Upload Soal Otomatis</h3>
+        <p style="font-size: 0.9em; color: #555;">
+            Upload file <b>.txt</b> berisi cerita. Gunakan tanda kurung <b>[...]</b> untuk kunci jawaban.<br>
+            <span style="background:white; padding:2px 5px; border-radius:4px; font-family:monospace;">Contoh: My name is [Zahra] and I live in [Surabaya].</span>
+        </p>
+
+        <label style="font-weight:bold; font-size:0.9em;">1. Judul Materi</label>
+        <input type="text" id="auto-listen-title" placeholder="Contoh: Daily Activity" style="margin-bottom:10px;">
+
+        <label style="font-weight:bold; font-size:0.9em;">2. Link Audio/YouTube (Opsional)</label>
+        <input type="text" id="auto-listen-link" placeholder="Tempel Link di sini..." style="margin-bottom:10px;">
+
+        <label style="font-weight:bold; font-size:0.9em;">3. Target Kelas</label>
+        <select id="auto-listen-class" style="margin-bottom:10px;">
+            <option value="">-- Pilih Kelas --</option>
+        </select>
+
+        <label style="font-weight:bold; font-size:0.9em;">4. Pilih File (.txt)</label>
+        <input type="file" id="auto-listen-file" accept=".txt" style="margin-bottom:15px;">
+
+        <button class="primary" id="btn-auto-upload-listen" style="background-color: #1565c0; width: 100%;">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Upload & Terbitkan
+        </button>
+    </div>
+
+    <div class="feature-card">
+        <h3><i class="fa-solid fa-list"></i> Daftar Soal Aktif</h3>
+        <div id="teacher-listening-list" class="content-list">
+            <div class="spinner"></div>
+        </div>
+    </div>
+</div>
+
+
+        <div id="teacher-speaking-page" class="sub-page">
+    <div class="header">
+        <button class="back-btn" data-target="teacher-main-menu"><i class="fa-solid fa-arrow-left"></i></button>
+        <h1>Speaking Challenge AI</h1>
+    </div>
+
+    <div class="feature-card">
+        <h3>Buat Tantangan Baru</h3>
+        <label>Judul Materi:</label>
+        <input type="text" id="speaking-new-title" placeholder="Contoh: Chapter 1 - Greeting">
+        
+        <label>Kalimat Target (Inggris):</label>
+        <textarea id="speaking-new-sentence" rows="3" placeholder="Contoh: Good morning, how are you?"></textarea>
+        
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <div style="flex:1;">
+                <label>XP:</label>
+                <input type="number" id="speaking-new-xp" value="100">
+            </div>
+            <div style="flex:2;">
+                <label>Kelas:</label>
+                <select id="speaking-new-class"><option value="">-- Loading --</option></select>
+            </div>
+        </div>
+        <button class="primary" id="btn-create-speaking-task" style="margin-top:15px; background-color: #007bff;">Terbitkan</button>
+    </div>
+
+    <div class="feature-card">
+        <h3>Daftar Tantangan</h3>
+        <div id="teacher-speaking-list-container" class="content-list"><div class="spinner"></div></div>
+    </div>
+</div>
+
+            <div id="teacher-feedback-page" class="sub-page"><div class="header"><button class="back-btn" data-target="teacher-main-menu"><i class="fa-solid fa-arrow-left"></i></button><h1>Jurnal Feedback Siswa</h1></div><div class="feature-card" style="background: #f8f9fa; border-left: 5px solid var(--primary-color);"><h3><i class="fa-solid fa-filter"></i> Filter Data</h3><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><div><label style="font-size: 0.8em; color: #666;">Pilih Kelas:</label><select id="feedback-class-select" style="width: 100%; padding: 8px;"><option value="">-- Pilih Kelas --</option></select></div><div><label style="font-size: 0.8em; color: #666;">Pilih Tanggal:</label><input type="date" id="feedback-date-select" style="width: 100%; padding: 8px;"></div></div><button class="primary" id="load-feedback-btn" style="margin-top: 15px; width: 100%;"><i class="fa-solid fa-magnifying-glass"></i> Tampilkan Feedback</button></div><div id="feedback-summary-panel" class="feature-card" style="display: none; background: linear-gradient(135deg, #6f42c1 0%, #8e44ad 100%); color: white;"><div style="display: flex; justify-content: space-around; text-align: center;"><div><h1 id="summary-total" style="margin: 0; font-size: 2.5em;">0</h1><small>Total Masukan</small></div><div><h1 style="margin: 0; font-size: 2.5em;"><i class="fa-solid fa-star" style="color: #F5A623; font-size: 0.6em;"></i> <span id="summary-rating">0.0</span></h1><small>Rata-rata Rating</small></div></div></div><div class="feature-card"><h3>Daftar Detail</h3><div id="feedback-list-container" class="content-list"><p style="text-align: center; color: #888; padding: 20px;">Silakan pilih Kelas & Tanggal, lalu klik "Tampilkan".</p></div></div></div>
+        </div>
+
+        <div id="student-dashboard-page" class="page">
+   <div id="student-speaking-page" class="sub-page">
+    <div class="header">
+        <button class="back-btn" onclick="keluarDariSpeaking()">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <h1>Speaking Test</h1>
+    </div>
+
+    <div class="feature-card" style="text-align:center; padding: 20px;">
+        <h3 id="speak-task-title" style="color:#555;">Loading...</h3>
+        
+        <div id="speak-target-text" style="background:#e3f2fd; padding:15px; margin:20px 0; font-size:1.3em; font-weight:bold; color:#1565c0; border:2px dashed #90caf9; border-radius:10px;">...</div>
+
+        <div style="margin: 30px 0;">
+            <button id="btn-start-record" class="mic-btn" style="width: 90px; height: 90px; border-radius: 50%; border: none; background: #f5f5f5; color: #555; font-size: 2.5em; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: 0.3s;">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+            <p id="mic-status-text" style="margin-top: 15px; font-weight: 600; color: #888;">Tap Mic untuk Bicara</p>
+        </div>
+
+        <div id="speak-live-box" style="display:none; margin-bottom: 20px; background: #fff3e0; padding: 10px; border-radius: 8px;">
+            <p style="font-size:0.8em; color:#e67e22; margin-bottom:5px;">Sedang mendengarkan...</p>
+            <div id="speak-live-transcript" style="font-size: 1.2em; color: #333; font-style: italic; min-height: 30px; line-height: 1.4;">...</div>
+        </div>
+
+        <div id="speak-result-box" style="display: none; border-top: 2px solid #eee; padding-top: 20px;">
+            <h1 id="speak-final-score" style="font-size: 3.5em; color: #2ecc71; margin: 0;">0%</h1>
+            
+            <div id="speak-feedback-text" style="background: #fafafa; padding: 15px; border-radius: 8px; margin: 15px 0; line-height: 1.8; font-size: 1.1em; text-align: left;">...</div>
+
+            <button id="btn-claim-speak-xp" class="primary" style="width: 100%; display:none; margin-top: 10px;">🎁 Klaim XP</button>
+            
+            <button id="btn-retry-speak" class="secondary" style="margin-top: 10px; width: 100%;">
+                <i class="fa-solid fa-rotate-right"></i> Ulangi
+            </button>
+        </div>
+    </div>
+</div>
+            
+            <div id="student-main-menu" class="sub-page active">
+                <div class="header-info" style="background: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                        <div style="display:flex; flex-direction:column;">
+                            <h1 id="student-welcome" style="font-size: 1.2em; margin:0;">Selamat Datang!</h1>
+                            <div id="student-rank-display" style="margin-top: 5px;"></div>
+                        </div>
+                        
+                        <button class="logout-btn" id="student-logout-btn" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></button>
+                    </div>
+                    <div id="student-live-clock" style="font-size: 0.9em; color: #666; border-top: 1px solid #eee; padding-top: 10px; display: flex; justify-content: space-between;">
+                         <span><i class="fa-regular fa-calendar"></i> <span id="student-day-date">...</span></span>
+                         <span style="font-weight:700; color:var(--primary-color);"><i class="fa-regular fa-clock"></i> <span id="student-time">00:00</span></span>
+                    </div>
+                    <div id="student-learning-status-box" style="margin-top: 10px; padding: 10px; border-radius: 8px; background: #f1f3f4; text-align: center; font-size: 0.9em;">
+                        <span id="student-learning-status-text" style="font-weight: 600; color: #777;">Pembelajaran Daring Belum Dimulai</span>
+                    </div>
+                    <div id="student-timer-panel" style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; text-align: center; border: 1px solid #ffeeba;">
+                        <span style="display: block; font-size: 0.8em; margin-bottom: 5px;"><i class="fa-regular fa-clock"></i> Sisa Waktu:</span>
+                        <span id="student-countdown-display" style="font-size: 2em; font-weight: 800; letter-spacing: 2px;">00:00:00</span>
+                    </div>
+                </div>
+
+                <div id="student-join-class" style="display:none;" class="feature-card">
+                    <h3><i class="fa-solid fa-door-open"></i> Gabung Kelas</h3>
+                    <p>Lengkapi data di bawah ini.</p>
+                    <label class="input-label">Nama Lengkap:</label><input type="text" id="join-student-name" placeholder="Contoh: M.Mifatahur ">
+                    <label class="input-label">Nomor Absen:</label><input type="number" id="join-student-number" placeholder="Contoh: 20">
+                    <label class="input-label">Kode Kelas:</label><input type="text" id="class-code-input" placeholder="Masukkan Kode dari Guru">
+                    <button class="primary" id="join-class-btn">Gabung Kelas</button>
+                </div>
+
+                <div id="student-waiting-screen" style="text-align: center; padding: 50px 20px; display: none; background: white; border-radius: 15px; margin-top: 20px;">
+                    <i class="fa-solid fa-mug-hot" style="font-size: 4em; color: #bdc3c7; margin-bottom: 20px;"></i>
+                    <h2 style="color: #7f8c8d;">Kelas Belum Dimulai</h2>
+                    <p style="color: #95a5a6;">Silakan tunggu sebentar ya.<br>Mam Yanti sedang menyiapkan materi...</p>
+                    <div class="spinner" style="margin: 20px auto;"></div>
+                </div>
+
+                <div id="start-class-animation" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(111, 66, 193, 0.95); z-index: 9999; display: none; justify-content: center; align-items: center; flex-direction: column; color: white; text-align: center;">
+                    <div style="font-size: 5em;">🚀</div>
+                    <h1>Let's Start!</h1>
+                    <p>Siap Belajar Bahasa Inggris?</p>
+                </div>
+
+                <div id="student-main-content" style="display:none;">
+                    <div class="feature-card"><h3><i class="fa-solid fa-gamepad"></i> Kuis Live</h3><button class="secondary" id="go-to-quiz-join-btn-student">Gabung Kuis Live (Individu)</button></div>
+                    
+                   <div class="feature-card">
+    <h3><i class="fa-solid fa-users-rays"></i> Game Kelompok</h3>
+    <p style="font-size:0.9em; color:#666; margin-bottom:10px;">Masuk ke Arena Game untuk bermain tim.</p>
+    
+    <a href="game_kelompok.html" class="secondary" style="background-color: #333; display:block; text-align:center; text-decoration:none; padding:12px; border-radius:8px; color:white; font-weight:bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <i class="fa-solid fa-gamepad"></i> MASUK ARENA
+    </a>
+</div>
+
+
+<div class="feature-card" style="border-left: 5px solid #E91E63;">
+                        <h3 style="color: #E91E63;"><i class="fa-solid fa-hand-back-fist"></i> Adu Cepat (Buzzer)</h3>
+                        <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">Tekan tombol saat Mam Yanti membuka sesi!</p>
+                        <button class="secondary" onclick="openStudentHandPage()" style="color: #E91E63; border: 1px solid #E91E63; width: 100%;">
+                            ✋ Buka Tombol
+                        </button>
+                    </div>
+
+                    <div class="feature-card"><h3><i class="fa-solid fa-trophy" style="color: #F5A623;"></i> Ranking Siswa</h3><button class="secondary" id="go-to-leaderboard-btn">Lihat Ranking</button></div>
+    <div class="feature-card" style="border-left: 5px solid #e67e22;">
+    <h3><i class="fa-solid fa-user-check"></i> Absensi Harian</h3>
+    
+    <div id="attend-status-box" style="text-align: center; margin-bottom: 15px; padding: 15px; background: #fff3e0; border-radius: 8px; border: 1px dashed #e67e22;">
+        <div id="attend-icon-area" style="font-size: 2em; margin-bottom: 5px; color: #e67e22;">
+            <i class="fa-solid fa-circle-exclamation"></i>
+        </div>
+        <span id="attendance-status-text" style="color: #d35400; font-weight: bold; font-size: 1.1em;">BELUM ABSEN</span>
+        <br>
+        <small id="attendance-date-display" style="color: #666; font-style: italic;">Memuat Tanggal...</small>
+    </div>
+
+    <div id="attend-input-area">
+        <label style="font-size:0.9em; font-weight:bold;">Masukkan Nomor Absen:</label>
+        <input type="number" id="attendance-number" placeholder="Contoh: 15" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; text-align: center; font-size: 1.2em; font-weight:bold;">
+        
+        <button id="btn-submit-absen-final" class="primary" onclick="submitSmartAttendance()" style="width: 100%; background-color: #e67e22; padding: 12px;">
+            <i class="fa-solid fa-hand-point-up"></i> KLIK UNTUK HADIR
+        </button>
+        <div style="margin-top: 30px; border: 1px dashed #ff7675; background: #fff5f5; padding: 15px; border-radius: 10px;">
+                        <h4 style="color: #d63031; margin-top: 0; margin-bottom: 10px;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Zona Kenaikan Kelas
+                        </h4>
+                        
+                        <p style="font-size: 0.8em; color: #666; margin-bottom: 10px;">
+                            Gunakan tombol ini jika kamu naik kelas atau pindah kelas. 
+                            Poin XP kamu <b>TIDAK AKAN HILANG</b>.
+                        </p>
+
+                        <button id="btn-leave-class" onclick="leaveClassLogic()" style="width: 100%; padding: 12px; background: white; border: 1px solid #d63031; color: #d63031; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                            <i class="fa-solid fa-door-open"></i> Keluar Kelas (Pindah)
+                        </button>
+                    </div>
+                    <button id="student-logout-btn" ... >
+    </div>
+</div>
+
+
+              <div class="feature-card">
+    <h3><i class="fa-solid fa-comments"></i> Chat Kelas</h3>
+    <p style="font-size:0.9em; color:#666; margin-bottom:10px;">Diskusi seru dengan teman sekelas.</p>
+    
+    <a href="chat_kelas.html" class="primary" style="background-color: #075e54; display:block; text-align:center; text-decoration:none; padding:12px; border-radius:8px; color:white; font-weight:bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <i class="fa-solid fa-paper-plane"></i> Buka Chat
+    </a>
+</div>
+                    <div class="feature-card"><h3><i class="fa-solid fa-bullhorn"></i> Pengumuman</h3><div id="announcement-list" class="content-list"><div class="spinner-container"><div class="spinner"></div></div></div></div>
+                    <div class="feature-card"><h3><i class="fa-solid fa-book-open"></i> Materi Belajar</h3><div id="material-list" class="content-list"><div class="spinner-container"><div class="spinner"></div></div></div></div>
+                    <div class="feature-card"><h3><i class="fa-solid fa-file-pen"></i> Daftar Tugas</h3><div id="assignment-list-student" class="content-list"><div class="spinner-container"><div class="spinner"></div></div></div></div>
+                    <div class="feature-card"><h3><i class="fa-solid fa-microphone"></i> Speaking Practice</h3><div id="student-speaking-list" class="content-list"><div class="spinner"></div></div></div>
+                    <div class="feature-card" style="border-left: 5px solid #6f42c1;"><h3 style="color: #6f42c1;"><i class="fa-solid fa-headphones"></i> Listening Exam</h3><div id="student-listening-list" class="content-list"><div class="spinner"></div></div></div>
+                </div>
+            </div>
+
+            <div id="student-quiz-join-page" class="sub-page"><div class="header"><button class="back-btn" data-target="student-main-menu"><i class="fa-solid fa-arrow-left"></i></button><h1>Gabung Kuis</h1></div><div class="feature-card" style="text-align: center;"><h3>PIN Kuis</h3><input type="number" id="quiz-pin-input" class="pin-input" placeholder="123456" maxlength="6"><button class="primary" id="join-quiz-btn">Gabung</button></div></div>
+            <div id="student-quiz-lobby-page" class="sub-page"><div class="header"><button class="back-btn" onclick="window.location.reload()"><i class="fa-solid fa-arrow-left"></i></button><h1>Lobi Kuis: <span id="lobby-quiz-title-student">Memuat...</span></h1></div><div class="feature-card"><h3 class="lobby-waiting-text" id="student-lobby-status-text">Menunggu Mam Yanti memulai...</h3><div class="spinner" style="margin: 0 auto 20px auto;"></div><div id="student-final-score-display" style="display: none; text-align: center;"><div style="font-size: 4em; margin-bottom: -10px;">🎉</div><h2 style="color: #555; margin-bottom: 5px;">Kuis Selesai!</h2><p style="color: #888; font-size: 0.9em;">Kamu berhasil mendapatkan nilai:</p><h1 id="student-final-score-text">0</h1><div style="background: white; padding: 10px; border-radius: 10px; display: inline-block; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);"><span style="color: var(--primary-color); font-weight: bold;">XP Reward Siap Diklaim!</span></div><button class="primary" id="back-to-lobby-btn"><i class="fa-solid fa-gift"></i> Klaim XP & Keluar</button></div></div><div class="feature-card"><h3>Teman Sekelas (<span id="lobby-player-count-student">0</span>)</h3><div id="lobby-player-list-student" class="lobby-player-list-container"></div></div></div>
+            
+            <div id="student-quiz-game-page" class="sub-page">
+                <div class="quiz-game-page">
+                    <div class="quiz-game-header"><h2 id="student-question-number">Soal 1 / 10</h2></div><h1 class="quiz-question-text" id="student-question-text">...</h1>
+                    <div class="quiz-answer-options" style="display:grid; gap:10px;"></div>
+                    <div class="quiz-game-footer">
+                        <button class="primary" id="student-next-question-btn" disabled>Lanjut</button>
+                        <div id="student-mini-leaderboard" style="display: none; margin-top: 15px; padding: 10px; background: #2c3e50; border-radius: 10px; color: white; justify-content: space-between; align-items: center;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div id="my-live-rank" style="background: #f1c40f; color: #333; width: 30px; height: 30px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 800;">#?</div>
+                                <div><small style="opacity: 0.8; font-size: 0.8em;">Posisi Kamu</small><br><strong id="my-live-score">0 Poin</strong></div>
+                            </div>
+                            <div style="text-align: right;"><small style="opacity: 0.8; font-size: 0.8em;">Pemimpin 👑</small><br><strong id="top-player-name">...</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+<div id="student-game-join-page" class="sub-page">
+                <div class="header"><button class="back-btn" data-target="student-main-menu"><i class="fa-solid fa-arrow-left"></i></button><h1>Game Kelompok</h1></div>
+                <div class="feature-card" style="text-align:center;">
+                    <h3>Masukkan Kode</h3>
+                    <input type="number" id="inp-student-pin" class="pin-input" placeholder="000000">
+                    <button class="primary" id="btn-student-join">Masuk Lobby</button>
+                </div>
+            </div>
+
+            <div id="student-game-lobby-page" class="sub-page">
+                <div class="header"><h1>Lobby</h1></div>
+                <div class="feature-card" style="text-align:center;">
+                    <h3 id="student-game-lobby-status-text">Menunggu...</h3>
+                    <p>Mam Yanti sedang membagi kelompok.</p>
+                    
+                    <div id="box-team-info" style="display:none; margin-top:20px; padding:20px; border-radius:10px; color:white; font-weight:bold; font-size:1.5em;">
+                        TIM <span id="lbl-student-team-name">...</span>
+                    </div>
+                    <p id="msg-team-info" style="display:none;">Cari teman satu tim kamu!</p>
+
+                    <div id="student-lobby-chosen" style="display:none; background:#fff3cd; padding:15px; border-radius:10px; margin-top:15px; border:2px solid #F5A623; animation: pulse 1s infinite;">
+                        <h2 style="color:#d35400; margin:0;">👑 KAMU TERPILIH!</h2>
+                        <p>Mam Yanti menunjukmu untuk mengacak tim.</p>
+                        <label>Jumlah Tim:</label>
+                        <select id="student-team-count-select" style="padding:5px; margin:5px;">
+                            <option value="2">2 Tim</option><option value="3">3 Tim</option>
+                            <option value="4">4 Tim</option><option value="5">5 Tim</option>
+                        </select>
+                        <button id="student-trigger-shuffle-btn" class="primary" style="background:#d35400; margin-top:10px;">
+                            <i class="fa-solid fa-shuffle"></i> ACAK SEKARANG
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="student-game-play-page" class="sub-page">
+                <div class="quiz-game-page">
+                    <div style="padding:10px; background:white; display:flex; justify-content:space-between; align-items:center; border-radius:10px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+                        <span id="badge-team-name" style="font-weight:bold; padding:5px 10px; border-radius:5px; background:#ddd;">TIM ...</span>
+                        <span id="lbl-team-score" style="font-weight:bold; color:var(--primary-color);">0 XP</span>
+                    </div>
+                    
+                    <div style="padding:20px; text-align:center;">
+                        <h2 id="student-game-question-text" style="color:#555;">DENGARKAN SOAL!</h2>
+                        <p style="color:#888; font-size:0.9em;">Soal dibacakan oleh Mam Yanti</p>
+                        
+                        <div id="container-game-buttons" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px; opacity:0.5; pointer-events:none;">
+                            <button class="game-big-btn btn-A" id="btn-opt-0">
+                                <span style="font-size:1.5em;">A</span><br>
+                                <span class="opt-text" style="font-size:0.6em;">...</span>
+                            </button>
+                            <button class="game-big-btn btn-B" id="btn-opt-1">
+                                <span style="font-size:1.5em;">B</span><br>
+                                <span class="opt-text" style="font-size:0.6em;">...</span>
+                            </button>
+                            <button class="game-big-btn btn-C" id="btn-opt-2">
+                                <span style="font-size:1.5em;">C</span><br>
+                                <span class="opt-text" style="font-size:0.6em;">...</span>
+                            </button>
+                            <button class="game-big-btn btn-D" id="btn-opt-3">
+                                <span style="font-size:1.5em;">D</span><br>
+                                <span class="opt-text" style="font-size:0.6em;">...</span>
+                            </button>
+                        </div>
+                        
+                        <div id="lbl-game-status" style="margin-top:20px; font-weight:bold; color:var(--primary-color);">Menunggu jawaban dibuka...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="student-game-finished-page" class="sub-page">
+                <div class="header"><button class="back-btn" data-target="student-main-menu"><i class="fa-solid fa-arrow-left"></i></button><h1>Game Selesai</h1></div>
+                <div class="feature-card" style="text-align:center; padding:40px 20px;">
+                    <div style="font-size:4em; margin-bottom:20px;">🏆</div>
+                    <h2>Permainan Berakhir!</h2>
+                    <p>Skor Akhir Tim Kamu:</p>
+                    <h1 id="student-game-final-score" style="font-size:3em; color:var(--primary-color); margin:10px 0;">0 XP</h1>
+                    <button class="primary" id="claim-game-xp-btn">Klaim XP & Keluar</button>
+                </div>
+            </div>
+
+        
+
+      <div id="student-speaking-page" class="sub-page">
+    <div class="header">
+        <button class="back-btn" onclick="showSubPage(document.getElementById('student-dashboard-page'), 'student-main-menu'); stopRecording();">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <h1>Speaking Test</h1>
+    </div>
+
+    <div class="feature-card" style="text-align:center; padding: 20px;">
+        <h3 id="speak-task-title" style="color:#555;">Loading...</h3>
+        
+        <div id="speak-target-text" style="background:#e3f2fd; padding:15px; margin:15px 0; font-size:1.3em; font-weight:bold; color:#1565c0; border:2px dashed #90caf9; border-radius:10px;">
+            ...
+        </div>
+
+        <div style="margin: 30px 0;">
+            <button id="btn-record-toggle" class="mic-btn" style="width: 90px; height: 90px; border-radius: 50%; border: none; background: #f5f5f5; color: #555; font-size: 2.5em; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: 0.3s;">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+            <p id="mic-status-text" style="margin-top: 15px; font-weight: 600; color: #888;">Tap Mic untuk Bicara</p>
+        </div>
+
+        <div id="speak-live-box" style="display:none; margin-bottom: 20px; background: #fff3e0; padding: 10px; border-radius: 8px;">
+            <p style="font-size:0.8em; color:#e67e22; margin-bottom:5px;">Sedang mendengarkan...</p>
+            <div id="speak-live-transcript" style="font-size: 1.2em; color: #333; font-style: italic; min-height: 30px; line-height: 1.4;">...</div>
+        </div>
+
+        <div id="speak-result-box" style="display: none; border-top: 2px solid #eee; padding-top: 20px;">
+            <h1 id="speak-final-score" style="font-size: 3.5em; color: #2ecc71; margin: 0;">0%</h1>
+            <div id="speak-feedback-text" style="background: #fafafa; padding: 15px; border-radius: 8px; margin: 15px 0; line-height: 1.8; font-size: 1.1em; text-align: left;">...</div>
+            
+            <button id="btn-claim-speak-xp" class="primary" style="width: 100%; display:none; margin-top: 10px;">🎁 Klaim XP</button>
+            <button id="btn-retry-speak" class="secondary" style="margin-top: 10px; width: 100%;"><i class="fa-solid fa-rotate-right"></i> Ulangi</button>
+        </div>
+    </div>
+</div>
+    
+    <div id="live-transcript-box" style="display:none; text-align:center; color:#aaa; font-size:0.8em; margin-top:10px;">
+        Mendengarkan: <span id="live-transcript-text">...</span>
+    </div>
+</div>
+    <div id="student-leaderboard-page" class="sub-page" style="display: none;">
+    <div class="header">
+        <button class="back-btn" onclick="showSubPage(document.getElementById('student-dashboard-page'), 'student-main-menu')">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <h1>Hall of Fame 🏆</h1>
+    </div>
+
+    <div style="padding:15px; text-align:center;">
+        <div style="background:#f1f2f6; padding:5px; border-radius:30px; display:inline-flex; width:100%;">
+            <button onclick="loadHallOfFame('school')" id="btn-hof-school" style="flex:1; border:none; background:#fff; padding:10px; border-radius:25px; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                Se-Sekolah
+            </button>
+            <button onclick="loadHallOfFame('class')" id="btn-hof-class" style="flex:1; border:none; background:transparent; padding:10px; border-radius:25px; font-weight:bold; color:#777;">
+                Teman Sekelas
+            </button>
+        </div>
+    </div>
+
+    <div id="hof-list-container" style="padding: 10px 20px; padding-bottom: 80px;">
+        <div class="spinner-container"><div class="spinner"></div></div>
+    </div>
+</div>
+
+            <div id="student-task-page" class="sub-page"><div class="header"><button class="back-btn" data-target="student-main-menu"><i class="fa-solid fa-arrow-left"></i></button><h1 id="task-detail-title">Kirim Tugas</h1></div><div class="feature-card"><h3 id="task-detail-desc-title">Deskripsi:</h3><p id="task-detail-desc" style="white-space: pre-wrap; margin-bottom: 15px;"></p></div><div class="feature-card"><h3><i class="fa-solid fa-link"></i> Kirim Link GDrive</h3><input type="url" id="task-link-input" placeholder="Link Google Drive..."><button class="primary" id="submit-task-btn">Kirim Tugas</button></div></div>
+          
+      <div id="smart-speaking-page" class="sub-page" style="display:none; background: #f4f6f9; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; overflow-y: auto;">
+    
+    <div class="header" style="background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100;">
+        <button class="back-btn" onclick="tutupSmartSpeaking()">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <h1 style="color:#333; font-size: 1.2em;">Speaking Challenge</h1>
+    </div>
+
+    <div style="padding: 20px; display: flex; flex-direction: column; align-items: center; padding-bottom: 120px;">
+        
+        <div style="background: white; padding: 20px; border-radius: 15px; width: 100%; max-width: 500px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); text-align: center; margin-bottom: 25px; margin-top: 10px;">
+            <h3 id="smart-title" style="color: #6c757d; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">TOPIC</h3>
+            <div id="smart-target-text" style="font-size: 1.3em; font-weight: 700; color: #2c3e50; line-height: 1.4;">...</div>
+        </div>
+
+        <div style="position: relative; margin-bottom: 20px;">
+            <div id="smart-mic-ring" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 110px; height: 110px; border-radius: 50%; border: 2px solid #e0e0e0; z-index: 0;"></div>
+            <button id="smart-mic-btn" style="width: 80px; height: 80px; border-radius: 50%; border: none; background: linear-gradient(135deg, #007bff, #0056b3); color: white; font-size: 2.2em; cursor: pointer; position: relative; z-index: 1; box-shadow: 0 8px 15px rgba(0,123,255,0.3); transition: all 0.3s ease;">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+        </div>
+        <p id="smart-status" style="color: #666; font-weight: 500; margin-bottom: 15px; font-size: 0.95em;">Ketuk mic untuk mulai</p>
+
+        <div id="smart-live-box" style="display:none; width: 100%; max-width: 500px; text-align: center; background: #e3f2fd; padding: 12px; border-radius: 10px; color: #0d47a1; margin-bottom: 20px;">
+            <span style="font-size: 0.75em; opacity: 0.7; text-transform: uppercase;">Mendengar:</span><br>
+            <span id="smart-transcript" style="font-style: italic; font-weight: 600;">...</span>
+        </div>
+
+        <div id="smart-result-box" style="display: none; width: 100%; max-width: 500px; text-align: center; animation: popIn 0.5s ease;">
+            <div style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                <div style="font-size: 3.5em; font-weight: 800; color: #28a745; line-height: 1;" id="smart-score">0%</div>
+                <div style="color: #888; margin-bottom: 15px; font-size: 0.9em;">Akurasi Pengucapan</div>
+                
+                <div id="smart-feedback" style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; line-height: 1.6; font-size: 1em;">...</div>
+                
+                <button id="smart-claim-btn" class="primary" style="width: 100%; margin-bottom: 10px; background: #28a745; padding: 12px; font-size: 1em; border-radius: 25px;">
+                    🎁 Klaim Hadiah
+                </button>
+                <button id="smart-retry-btn" class="secondary" style="width: 100%; padding: 12px; border-radius: 25px;">
+                    <i class="fa-solid fa-rotate-right"></i> Coba Lagi
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+          
+            <div id="student-chat-page" class="sub-page"><div class="header"><button class="back-btn" data-target="student-main-menu"><i class="fa-solid fa-arrow-left"></i></button><h1 id="student-chat-title">Chat Kelas</h1></div><div class="chat-page-container"><div class="chat-messages" id="chat-messages-student"></div><div class="chat-input-area"><input type="text" id="chat-input-student" placeholder="Ketik pesan..."><button id="send-chat-btn-student" class="primary"><i class="fa-solid fa-paper-plane"></i></button></div></div></div>
+        </div>
+
+
+        
+
+        <div id="teacher-end-session-modal" class="modal-overlay"><div class="modal-card"><h2 style="color: var(--answer-red);">Akhiri Sesi?</h2><select id="end-session-class-select"><option value="">-- Pilih Kelas --</option></select><button class="primary" id="confirm-end-session-btn" style="background-color: var(--answer-red);">Kirim Sinyal Feedback</button><button class="secondary" id="cancel-end-session-btn">Batal</button></div></div>
+        <div id="student-feedback-modal" class="modal-overlay"><div class="modal-card"><h2 style="color: var(--primary-color);">Sesi Selesai</h2><p>Beri rating untuk Mam Yanti:</p><div class="star-container"><i class="fa-solid fa-star star-rating" data-value="1"></i><i class="fa-solid fa-star star-rating" data-value="2"></i><i class="fa-solid fa-star star-rating" data-value="3"></i><i class="fa-solid fa-star star-rating" data-value="4"></i><i class="fa-solid fa-star star-rating" data-value="5"></i></div><textarea id="feedback-critic" placeholder="Kritik & Saran..." rows="3"></textarea><textarea id="feedback-topic-req" placeholder="Request materi..." rows="2"></textarea><button class="primary" id="submit-feedback-modal-btn" disabled>Kirim Feedback</button></div></div>
+        <div id="point-notification-modal" class="modal-overlay"><div class="modal-card"><h2 style="color: var(--primary-color);"><i class="fa-solid fa-star"></i> Poin Bertambah!</h2><p id="point-notification-text">...</p><button class="primary" id="close-point-notification-btn">OK</button></div></div>
+        <div id="answer-warning-modal" class="modal-overlay"><div class="modal-card"><h2 style="color: var(--danger-color);">Jawaban Berbeda!</h2><p>Samakan jawaban dengan tim!</p><button class="primary" id="close-warning-modal-btn">OK</button></div></div>
+        
+     <div id="daily-vocab-modal" class="modal-overlay">
+            <div class="vocab-card">
+                <div style="position:absolute; top:-20px; left:50%; transform:translateX(-50%); background:#6f42c1; color:white; padding:5px 15px; border-radius:20px; font-weight:bold; font-size:0.8em; box-shadow:0 5px 10px rgba(0,0,0,0.2);">✨ DAILY WORD ✨</div>
+                <h1 id="vocab-word-text" class="vocab-word">LOADING...</h1>
+                <p id="vocab-meaning-text" class="vocab-meaning">...</p>
+                <div class="vocab-example">
+                    <i class="fa-solid fa-quote-left" style="color:#ddd;"></i><br>
+                    <span id="vocab-example-text">...</span>
+                </div>
+                <button class="primary" onclick="document.getElementById('daily-vocab-modal').style.display='none'">I Got It! 😎</button>
+            </div>
+        </div> 
+        <div id="create-assignment-modal" class="modal-overlay">
+            <div class="modal-card">
+                <h3>📝 Buat Tugas Baru</h3>
+                
+                <label>Pilih Kelas Tujuan</label>
+                <select id="assignment-class-select" style="background:#f0f7ff; border:1px solid #4A90E2; font-weight:bold;">
+                    <option value="">-- Pilih Kelas --</option>
+                </select>
+
+                <label>Judul Tugas</label>
+                <input type="text" id="assignment-title" placeholder="Contoh: Narrative Text Essay">
+                
+                <label>Deskripsi / Soal</label>
+                <textarea id="assignment-desc" rows="3" placeholder="Jelaskan detail tugas..."></textarea>
+
+                <label style="color:#155724; font-weight:bold;">📂 Link Folder GDrive (Tempat Pengumpulan)</label>
+                <input type="url" id="assignment-drive-link" placeholder="Tempel Link Folder Google Drive di sini...">
+                <small style="display:block; margin-bottom:10px; color:#666;">*Siswa akan diarahkan ke link ini untuk upload file mereka.</small>
+                
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <div style="flex: 1;">
+                        <label>📅 Tenggat Waktu</label>
+                        <input type="datetime-local" id="assignment-deadline" class="input-field">
+                    </div>
+                    <div style="flex: 1;">
+                        <label>⭐ Max XP</label>
+                        <input type="number" id="assignment-max-score" value="100" class="input-field">
+                    </div>
+                </div>
+                
+                <div class="modal-buttons">
+                    <button class="secondary" onclick="document.getElementById('create-assignment-modal').style.display='none'">Batal</button>
+                    <button class="primary" onclick="createAssignment()">Terbitkan Tugas</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="task-xp-modal" class="modal-overlay">
+            <div class="modal-card" style="text-align:center;">
+                <div style="font-size: 4em;">🎉</div>
+                <h2 style="color:var(--primary-color);">Tugas Terkirim!</h2>
+                <p id="task-xp-msg">Kamu mengumpulkan tepat waktu.</p>
+                <h1 id="task-xp-amount" style="font-size:3.5em; color:#27ae60; margin:10px 0;">+100 XP</h1>
+                <button class="primary" onclick="document.getElementById('task-xp-modal').style.display='none'">Mantap! 😎</button>
+            </div>
+        </div>
+        
+
+<div id="assignment-recap-modal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 600px; width: 90%;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3>📊 Rekap Pengumpulan</h3>
+            <button onclick="document.getElementById('assignment-recap-modal').style.display='none'" style="background:none; border:none; font-size:1.5em;">&times;</button>
+        </div>
+        
+        <div id="recap-header-info" style="background:#f8f9fa; padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.9em;">
+            </div>
+
+        <div style="max-height: 300px; overflow-y: auto;">
+            <table style="width:100%; border-collapse: collapse; font-size: 0.9em;">
+                <thead>
+                    <tr style="background:#eee; text-align:left;">
+                        <th style="padding:10px;">Nama Siswa</th>
+                        <th style="padding:10px;">Waktu Kirim</th>
+                        <th style="padding:10px;">Status</th>
+                        <th style="padding:10px;">Nilai</th>
+                    </tr>
+                </thead>
+                <tbody id="recap-list-body">
+                    </tbody>
+            </table>
+        </div>
+        
+        <div class="modal-buttons">
+            <button class="secondary" onclick="document.getElementById('create-speaking-modal').style.display='none'">Batal</button>
+            <button class="primary" onclick="createSpeakingTask()">Terbitkan</button>
+        </div>
+    </div>
+</div>
+    
+        <div id="student-listening-page" class="sub-page" style="display:none; background: #f8f9fa; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; overflow-y: auto;">
+    
+    <div class="header" style="background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; padding: 15px; display: flex; align-items: center; gap: 15px;">
+        <button class="back-btn" onclick="tutupListeningExam()" style="background: none; border: none; font-size: 1.2em; cursor: pointer; color: #333;">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <h1 style="color:#333; font-size: 1.2em; margin: 0; font-weight: 600;">Listening Exam</h1>
+    </div>
+
+    <div style="padding: 20px; max-width: 800px; margin: 0 auto; padding-bottom: 120px;">
+        
+        <div id="sl-media-container" style="margin-bottom: 25px; border-radius: 15px; overflow: hidden; background: #000; box-shadow: 0 5px 15px rgba(0,0,0,0.2); min-height: 100px; display:none;">
+            </div>
+
+        <div class="feature-card" style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-top: 5px solid #6f42c1; margin-bottom: 25px;">
+            <h3 id="sl-title" style="margin-top: 0; margin-bottom: 10px; color: #6f42c1;">Loading...</h3>
+            <p style="font-size: 0.95em; color: #666; margin-bottom: 20px; line-height: 1.5;">
+                <i class="fa-solid fa-headphones"></i> Dengarkan audio dan lengkapi kalimat di bawah ini.
+            </p>
+            
+            <div id="sl-cloze-container" style="font-family: 'Poppins', sans-serif; font-size: 1.1em; line-height: 2.6; color: #333; background: #fff; padding: 10px;">
+                </div>
+        </div>
+
+        <div id="sl-result-box" style="display:none; margin-top: 20px; padding: 25px; background: white; border-radius: 15px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: popIn 0.5s ease;">
+            <div style="font-size: 4em; margin-bottom: 10px;">📊</div>
+            <h2 style="color: #2ecc71; margin: 0; font-size: 3.5em; line-height: 1;" id="sl-final-score">0</h2>
+            <p style="color: #888; font-weight: 500; margin-top: 5px;">Nilai Kamu</p>
+            
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin: 15px 0;">
+                <p id="sl-feedback-msg" style="font-weight: bold; color: #555; margin: 0;">...</p>
+            </div>
+            
+            <button id="sl-claim-btn" class="primary" style="width: 100%; margin-top: 10px; background: #2ecc71; border-radius: 30px; padding: 12px; font-size: 1.1em; border: none; color: white; cursor: pointer;">
+                🎁 Klaim XP & Selesai
+            </button>
+        </div>
+
+        <button id="sl-submit-btn" class="primary" onclick="submitClozeListening()" style="width: 100%; padding: 15px; font-size: 1.1em; margin-top: 10px; background-color: #6f42c1; border-radius: 30px; border: none; color: white; cursor: pointer; box-shadow: 0 5px 15px rgba(111, 66, 193, 0.3);">
+            <i class="fa-solid fa-check-circle"></i> Periksa Jawaban
+        </button>
+
+    </div>
+</div>
+</div>
+
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+
+    <script src="assets/js/firebase-config.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/teacher.js"></script>
+    <script src="assets/js/student.js"></script>
+    <script src="assets/js/main.js"></script>
+
+
+<script src="assets/js/main.js"></script>
+
+<script>
+    // Fungsi untuk "Memancing" izin Audio dari Browser
+    function unlockAudioContext() {
+        const warningAudio = document.getElementById('sfx-warning');
+        
+        // Coba putar dan langsung pause
+        if (warningAudio) {
+            warningAudio.muted = true; // Mute dulu biar gak kaget
+            warningAudio.play().then(() => {
+                warningAudio.pause();     // Stop
+                warningAudio.currentTime = 0; // Reset
+                warningAudio.muted = false; // Unmute untuk nanti
+                console.log("🔓 Audio System Unlocked!");
+            }).catch(error => {
+                console.log("Audio unlock failed (belum ada interaksi user)");
+            });
+        }
+        
+        // Hapus listener agar tidak dijalankan terus menerus
+        document.body.removeEventListener('click', unlockAudioContext);
+        document.body.removeEventListener('touchstart', unlockAudioContext);
+        document.body.removeEventListener('keydown', unlockAudioContext);
+    }
+
+    // Pasang jebakan: Saat user klik/sentuh APAPUN pertama kali, audio di-unlock
+    document.body.addEventListener('click', unlockAudioContext);
+    document.body.addEventListener('touchstart', unlockAudioContext);
+    document.body.addEventListener('keydown', unlockAudioContext);
+</script>
+
+</body>
+</html>
+
+
+</body>
+</html>

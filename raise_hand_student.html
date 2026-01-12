@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siswa - Adu Cepat</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; text-align: center; }
+        .container { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        
+        h1 { margin: 0 0 10px 0; color: #E91E63; }
+        p { color: #666; margin-bottom: 30px; }
+
+        /* TOMBOL BUZZER RAKSASA */
+        #btn-buzzer {
+            width: 220px; height: 220px;
+            border-radius: 50%;
+            border: none;
+            font-size: 5em;
+            color: white;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; justify-content: center; align-items: center;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Status: MATI (Disabled) */
+        .status-off {
+            background: #bdc3c7;
+            box-shadow: 0 10px 0 #95a5a6;
+            cursor: not-allowed;
+            transform: scale(0.9);
+        }
+
+        /* Status: HIDUP (Active) */
+        .status-on {
+            background: #e74c3c;
+            box-shadow: 0 10px 0 #c0392b;
+            cursor: pointer;
+            animation: pulse 1s infinite;
+            transform: scale(1);
+        }
+        .status-on:active {
+            transform: scale(0.95) translateY(10px);
+            box-shadow: 0 0 0 #c0392b;
+        }
+
+        /* Status: SUKSES DITEKAN */
+        .status-success {
+            background: #2ecc71 !important;
+            box-shadow: none !important;
+            transform: scale(0.9) !important;
+            cursor: default !important;
+        }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
+        
+        .back-link { display: block; margin-top: 30px; text-decoration: none; color: #555; font-weight: bold; }
+        .loading { color: #E91E63; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 id="user-name">Memuat...</h1>
+        <p id="status-text">Menghubungkan ke Kelas...</p>
+
+        <button id="btn-buzzer" class="status-off" disabled>
+            <i class="fa-solid fa-hand"></i>
+        </button>
+        
+        <div id="feedback-msg" style="margin-top:20px; font-weight:bold; height:20px;"></div>
+
+        <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Kembali ke Menu Utama</a>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="assets/js/firebase-config.js"></script>
+
+    <script>
+        // === LOGIKA BUZZER SISWA (STANDALONE) ===
+        
+        let currentUser = null;
+        let userData = null;
+        let handListener = null;
+
+        // 1. CEK LOGIN & AMBIL DATA KELAS
+        firebase.auth().onAuthStateChanged(async (user) => {
+            if (!user) {
+                alert("Kamu belum login!");
+                window.location.href = 'index.html';
+                return;
+            }
+            currentUser = user;
+
+            // Ambil Data Siswa (Nama & Kelas)
+            try {
+                const doc = await db.collection('users').doc(user.uid).get();
+                if (!doc.exists) { alert("Data siswa tidak ditemukan."); return; }
+                
+                userData = doc.data();
+                document.getElementById('user-name').textContent = userData.name.split(' ')[0]; // Nama Panggilan
+
+                if (!userData.classId) {
+                    document.getElementById('status-text').textContent = "Kamu belum masuk kelas!";
+                    return;
+                }
+
+                // MULAI DENGARKAN SINYAL GURU
+                listenToTeacher(userData.classId);
+
+            } catch (e) { console.error(e); }
+        });
+
+        // 2. DENGARKAN STATUS SESI (REALTIME)
+        function listenToTeacher(classId) {
+            const btn = document.getElementById('btn-buzzer');
+            const statusTxt = document.getElementById('status-text');
+            const feedback = document.getElementById('feedback-msg');
+
+            // Reset Listener Lama
+            if(handListener) handListener();
+
+            handListener = db.collection('handSessions').doc(classId).onSnapshot(doc => {
+                const data = doc.data();
+
+                // KONDISI 1: GURU BUKA SESI (OPEN)
+                if (data && data.status === 'OPEN') {
+                    statusTxt.textContent = "CEPAT TEKAN TOMBOL!! 🔥";
+                    statusTxt.style.color = "#e74c3c";
+                    
+                    btn.disabled = false;
+                    btn.className = "status-on"; // Merah Berdenyut
+                    btn.onclick = () => sendSignal(classId); // Siap ditekan
+                    feedback.textContent = "";
+                } 
+                // KONDISI 2: GURU TUTUP SESI
+                else {
+                    statusTxt.textContent = "Menunggu Aba-aba Mam Yanti...";
+                    statusTxt.style.color = "#7f8c8d";
+                    
+                    btn.disabled = true;
+                    btn.className = "status-off"; // Abu-abu Mati
+                    btn.onclick = null;
+                    feedback.textContent = "";
+                }
+            });
+        }
+
+        // 3. KIRIM SINYAL (SAAT DITEKAN)
+        async function sendSignal(classId) {
+            const btn = document.getElementById('btn-buzzer');
+            const feedback = document.getElementById('feedback-msg');
+
+            // Efek Visual Langsung (Biar terasa responsif)
+            btn.className = "status-success"; // Jadi Hijau
+            btn.disabled = true;
+            
+            try {
+                // Kirim ke Database
+                await db.collection('handSessions').doc(classId).collection('buzzers').doc(currentUser.uid).set({
+                    studentName: userData.name,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                feedback.textContent = "BERHASIL TERKIRIM! 🎉";
+                feedback.style.color = "#27ae60";
+
+            } catch (e) {
+                console.error(e);
+                feedback.textContent = "Gagal kirim! Coba lagi.";
+                feedback.style.color = "red";
+                // Balikin tombol jadi merah kalau gagal
+                btn.className = "status-on";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

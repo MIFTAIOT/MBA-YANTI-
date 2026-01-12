@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Game Arena</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { margin: 0; background: #2c3e50; font-family: 'Poppins', sans-serif; color: white; user-select: none; overflow: hidden; }
+        
+        /* LAYAR INTRO */
+        #screen-intro { position: fixed; top:0; left:0; width:100%; height:100%; z-index:999; background: #1a1a2e; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; }
+        .btn-start { background: #e74c3c; color: white; border: none; padding: 20px 40px; font-family: 'Press Start 2P'; font-size: 1.2em; border-radius: 10px; cursor: pointer; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        .container { max-width: 500px; margin: 0 auto; padding: 20px; display: none; text-align: center; height: 100vh; flex-direction: column; justify-content: center; }
+        .pin-input { font-size: 2em; padding: 10px; text-align: center; letter-spacing: 5px; width: 200px; border-radius: 10px; border: none; margin: 20px 0; }
+        
+        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex-grow: 1; max-height: 50vh; margin-top: 20px; }
+        .game-btn { border: none; border-radius: 15px; font-size: 3em; color: white; font-weight: bold; cursor: pointer; transition: 0.1s; box-shadow: 0 5px 0 rgba(0,0,0,0.2); }
+        .game-btn:active { transform: translateY(5px); box-shadow: none; }
+        .btn-A { background: #e74c3c; } .btn-B { background: #3498db; } .btn-C { background: #f1c40f; } .btn-D { background: #2ecc71; }
+
+        #panel-shuffle { display: none; background: #f1c40f; padding: 20px; border-radius: 10px; margin-top: 20px; color: black; animation: shake 2s infinite; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
+
+        /* OVERLAY HASIL (Z-Index Tinggi) */
+        #overlay-result { position: fixed; top:0; left:0; width:100%; height:100%; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; font-family: 'Press Start 2P'; }
+    </style>
+</head>
+<body>
+
+    <audio id="sfx-win" src="assets/sounds/win.mp3" preload="auto"></audio>
+    <audio id="sfx-lose" src="assets/sounds/lose.mp3" preload="auto"></audio>
+
+    <div id="screen-intro">
+        <h1 style="font-family: 'Press Start 2P'; color: #f1c40f; margin-bottom: 30px;">TEAM<br>BATTLE</h1>
+        <button class="btn-start" onclick="enterGame()">TAP TO START</button>
+        <p style="margin-top:20px; color:#aaa;">Nyalakan Volume HP!</p>
+    </div>
+
+    <div id="screen-join" class="container">
+        <h1>MASUKKAN PIN</h1>
+        <input type="tel" id="inp-pin" class="pin-input" placeholder="000000" maxlength="6">
+        <button onclick="joinLobby()" class="btn-start" style="font-size:1em; padding:15px; background:#3498db;">GABUNG</button>
+    </div>
+
+    <div id="screen-lobby" class="container">
+        <h1>LOBBY</h1>
+        <p>Menunggu Guru...</p>
+        <div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:10px;">
+            Halo, <strong id="my-name">...</strong><br>
+            Tim: <strong id="my-team" style="font-size:1.5em; color:#f1c40f;">...</strong>
+        </div>
+        <div id="panel-shuffle">
+            <h3>👑 KAMU TERPILIH!</h3>
+            <p>Mam Yanti menunjukmu untuk mengacak tim.</p>
+            <button onclick="doShuffle()" class="btn-start" style="background:black; font-size:0.8em; padding:10px;">ACAK SEKARANG!</button>
+        </div>
+    </div>
+
+    <div id="screen-play" class="container" style="justify-content: flex-start;">
+        <div style="display:flex; justify-content:space-between; width:100%; padding:10px; background:rgba(0,0,0,0.3); border-radius:10px;">
+            <span id="hud-team">TIM ...</span>
+            <span id="hud-score" style="color:#f1c40f;">0 XP</span>
+        </div>
+        <h3 id="status-text" style="margin:20px 0; color:#bdc3c7;">DENGARKAN SOAL</h3>
+        <div id="warning-box" style="background:#d35400; font-size:0.8em; padding:5px; border-radius:5px; display:none;">
+            ⚠️ DISKUSI DULU! SATU TIM BEDA = SEMUA SALAH!
+        </div>
+        <div id="btn-grid" class="game-grid" style="opacity:0.5; pointer-events:none;">
+            <button class="game-btn btn-A" onclick="ans(0)">A</button>
+            <button class="game-btn btn-B" onclick="ans(1)">B</button>
+            <button class="game-btn btn-C" onclick="ans(2)">C</button>
+            <button class="game-btn btn-D" onclick="ans(3)">D</button>
+        </div>
+    </div>
+
+    <div id="screen-finish" class="container">
+        <h1 style="color:#f1c40f; font-family:'Press Start 2P';">GAME OVER</h1>
+        <p>Skor Akhir Kamu:</p>
+        <h2 id="final-score" style="font-size:4em; color:#2ecc71; margin:10px 0;">0</h2>
+        <p style="font-size:0.8em; color:#aaa;">Poin ini akan ditambahkan ke Profilmu.</p>
+        <button onclick="claimPoints()" id="btn-claim" class="btn-start" style="background:#27ae60; margin-top:20px;">
+            🎁 KLAIM POIN
+        </button>
+    </div>
+
+    <div id="overlay-result"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="assets/js/firebase-config.js"></script>
+
+    <script>
+        let currentUser = null;
+        let currentGameId = null;
+        let myGameScore = 0;
+        let lastTrigger = 0;
+        let isGameEnded = false; // Flag Pengaman
+
+        firebase.auth().onAuthStateChanged(u => {
+            if(!u) window.location.href='index.html';
+            currentUser = u;
+        });
+
+        function enterGame() {
+            const w = document.getElementById('sfx-win');
+            const l = document.getElementById('sfx-lose');
+            w.play().then(()=>{w.pause(); w.currentTime=0;}).catch(()=>{});
+            l.play().then(()=>{l.pause(); l.currentTime=0;}).catch(()=>{});
+            document.getElementById('screen-intro').style.display='none';
+            document.getElementById('screen-join').style.display='flex';
+        }
+
+        async function joinLobby() {
+            const pin = document.getElementById('inp-pin').value;
+            const snap = await db.collection('gameSessions').where('pin','==',pin).limit(1).get();
+            if(snap.empty) return alert("Room tidak ditemukan!");
+            
+            currentGameId = snap.docs[0].id;
+            await db.collection('gameSessions').doc(currentGameId).collection('players').doc(currentUser.uid).set({
+                name: currentUser.displayName, score:0, groupName:null
+            }, {merge:true});
+
+            document.getElementById('screen-join').style.display='none';
+            document.getElementById('screen-lobby').style.display='flex';
+            document.getElementById('my-name').textContent = currentUser.displayName;
+
+            monitorGame();
+        }
+
+        function monitorGame() {
+            // MONITOR GLOBAL
+            db.collection('gameSessions').doc(currentGameId).onSnapshot(doc => {
+                const d = doc.data();
+                
+                // Cek Acak
+                const pShuffle = document.getElementById('panel-shuffle');
+                if(d.shufflerId === currentUser.uid && !d.teamsFormed) {
+                    pShuffle.style.display = 'block';
+                    if(navigator.vibrate) navigator.vibrate([200,100,200]);
+                } else {
+                    pShuffle.style.display = 'none';
+                }
+
+                // LOGIKA PINDAH HALAMAN
+                if(d.status === 'playing') {
+                    document.getElementById('screen-lobby').style.display='none';
+                    document.getElementById('screen-play').style.display='flex';
+
+                    // Round Status
+                    const grid = document.getElementById('btn-grid');
+                    const txt = document.getElementById('status-text');
+                    const warn = document.getElementById('warning-box');
+                    const ov = document.getElementById('overlay-result');
+                    
+                    if(d.roundStatus === 'open') {
+                        grid.style.opacity='1'; grid.style.pointerEvents='auto';
+                        txt.textContent="JAWAB SEKARANG!"; txt.style.color="#2ecc71";
+                        warn.style.display='block';
+                        ov.style.display='none'; // Tutup overlay hasil sblmnya
+                    } else {
+                        grid.style.opacity='0.5'; grid.style.pointerEvents='none';
+                        txt.textContent="Tunggu Hasil..."; txt.style.color="#aaa";
+                        warn.style.display='none';
+                    }
+
+                } else if(d.status === 'finished') {
+                    // 🔥🔥 GAME SELESAI: PAKSA PINDAH & TUTUP OVERLAY 🔥🔥
+                    isGameEnded = true;
+                    
+                    // Sembunyikan semua layar lain
+                    document.getElementById('screen-lobby').style.display='none';
+                    document.getElementById('screen-play').style.display='none';
+                    
+                    // KUNCI: Tutup Overlay agar tombol klaim terlihat
+                    document.getElementById('overlay-result').style.display='none'; 
+
+                    // Tampilkan Layar Finish
+                    document.getElementById('screen-finish').style.display='flex';
+                    document.getElementById('final-score').textContent = myGameScore;
+                }
+            });
+
+            // MONITOR PLAYER
+            db.collection('gameSessions').doc(currentGameId).collection('players').doc(currentUser.uid).onSnapshot(doc => {
+                const p = doc.data();
+                if(!p) return;
+
+                if(p.groupName) {
+                    document.getElementById('my-team').textContent = p.groupName;
+                    document.getElementById('my-team').style.color = p.groupColor;
+                    document.getElementById('hud-team').textContent = p.groupName;
+                    document.getElementById('hud-team').style.color = p.groupColor;
+                }
+                
+                myGameScore = p.score || 0;
+                document.getElementById('hud-score').textContent = myGameScore + " XP";
+
+                // DETEKSI HASIL (AUDIO) - Hanya jika game BELUM berakhir
+                if(!isGameEnded && p.triggerTime && (!lastTrigger || p.triggerTime.toMillis() > lastTrigger)) {
+                    lastTrigger = p.triggerTime.toMillis();
+                    const win = document.getElementById('sfx-win');
+                    const lose = document.getElementById('sfx-lose');
+                    const ov = document.getElementById('overlay-result');
+                    
+                    ov.style.display = 'flex'; // Munculkan Overlay
+                    
+                    if(p.lastAnswerStatus === 'correct') {
+                        win.play();
+                        ov.style.background = "rgba(46, 204, 113, 0.95)";
+                        ov.innerHTML = "<h1 style='font-size:3em'>BENAR!</h1><p>+100 XP</p>";
+                    } else {
+                        lose.play();
+                        ov.style.background = "rgba(231, 76, 60, 0.95)";
+                        ov.innerHTML = "<h1 style='font-size:3em'>SALAH</h1><p>Tim Tidak Kompak / Salah</p>";
+                    }
+                }
+            });
+        }
+
+        async function doShuffle() {
+            await db.collection('gameSessions').doc(currentGameId).update({ triggerShuffle: true });
+            document.getElementById('panel-shuffle').style.display = 'none';
+        }
+
+        function ans(idx) {
+            document.getElementById('btn-grid').style.opacity='0.5';
+            document.getElementById('btn-grid').style.pointerEvents='none';
+            document.getElementById('status-text').textContent = "TERKIRIM!";
+            db.collection('gameSessions').doc(currentGameId).collection('players').doc(currentUser.uid).update({
+                currentAnswer: idx
+            });
+        }
+
+        async function claimPoints() {
+            const btn = document.getElementById('btn-claim');
+            btn.disabled = true; btn.textContent = "Sedang Mengklaim...";
+            
+            try {
+                // Update Total Score di Profil User
+                await db.collection('users').doc(currentUser.uid).update({
+                    totalScore: firebase.firestore.FieldValue.increment(myGameScore)
+                });
+                alert("✅ SELAMAT! Poin berhasil ditambahkan.");
+                window.location.href='index.html'; // Balik ke Dashboard
+            } catch(e) {
+                console.error(e);
+                alert("Gagal klaim: " + e.message);
+                btn.disabled = false; btn.textContent = "Coba Lagi";
+            }
+        }
+    </script>
+</body>
+</html>

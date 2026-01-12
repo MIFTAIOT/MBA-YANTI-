@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guru - Panel Adu Cepat</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        
+        .header { display: flex; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .back-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; margin-right: 15px; color: #555; }
+        h1 { margin: 0; font-size: 1.2em; color: #E91E63; }
+
+        .control-box { background: #fce4ec; border: 1px solid #f8bbd0; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
+        select { width: 100%; padding: 12px; border: 1px solid #E91E63; border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 1em; }
+        
+        .btn-group { display: flex; gap: 10px; justify-content: center; }
+        .btn { padding: 12px 25px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-size: 1em; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-start { background: #27ae60; box-shadow: 0 4px 0 #219150; }
+        .btn-start:active { transform: translateY(4px); box-shadow: none; }
+        .btn-stop { background: #c0392b; box-shadow: 0 4px 0 #96281b; }
+        .btn-stop:active { transform: translateY(4px); box-shadow: none; }
+
+        /* LIST SISWA */
+        .list-container { margin-top: 20px; }
+        .student-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 15px; background: white; border-bottom: 1px solid #eee; 
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .rank-badge { width: 40px; height: 40px; background: #eee; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 800; color: #555; font-size: 1.1em; }
+        
+        /* WARNA RANKING */
+        .rank-1 { background: #FFD700; color: #fff; box-shadow: 0 2px 10px rgba(255, 215, 0, 0.5); border: 2px solid #fff; transform: scale(1.1); }
+        .rank-2 { background: #C0C0C0; color: #fff; }
+        .rank-3 { background: #CD7F32; color: #fff; }
+
+        .winner-row { background: #fffde7; border-left: 5px solid #FFD700; }
+        
+        /* TOMBOL POIN SPESIAL */
+        .btn-point {
+            background: linear-gradient(45deg, #f1c40f, #f39c12);
+            color: white; border: none; padding: 8px 15px; border-radius: 20px;
+            font-weight: bold; cursor: pointer; box-shadow: 0 3px 0 #d35400;
+            display: flex; align-items: center; gap: 5px; font-size: 0.9em;
+        }
+        .btn-point:hover { transform: scale(1.05); }
+        .btn-point:active { transform: translateY(2px); box-shadow: none; }
+    </style>
+</head>
+<body>
+
+    <audio id="sfx-buzzer" src="assets/sounds/buzzer.mp3" preload="auto"></audio>
+
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="window.location.href='index.html'"><i class="fa-solid fa-arrow-left"></i></button>
+            <div>
+                <h1>Digital Hand ✋</h1>
+                <small style="color:#666;">Panel Guru</small>
+            </div>
+        </div>
+
+        <div class="control-box">
+            <label style="display:block; text-align:left; margin-bottom:5px; font-weight:bold; color:#c2185b;">Pilih Kelas:</label>
+            <select id="class-select">
+                <option value="">-- Memuat Kelas... --</option>
+            </select>
+
+            <div class="btn-group">
+                <button id="btn-start" class="btn btn-start" onclick="startSession()">
+                    <i class="fa-solid fa-play"></i> MULAI SESI
+                </button>
+                <button id="btn-stop" class="btn btn-stop" onclick="stopSession()" disabled>
+                    <i class="fa-solid fa-stop"></i> STOP
+                </button>
+            </div>
+            <p id="status-text" style="margin-top:10px; font-size:0.9em; color:#666;">Status: Menunggu...</p>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+            <h3>🥇 Urutan Tercepat</h3>
+            <span id="count-badge" style="background:#e3f2fd; color:#2196f3; padding:5px 15px; border-radius:15px; font-size:0.8em; font-weight:bold;">0 Masuk</span>
+        </div>
+        
+        <div id="result-list" class="list-container">
+            <div style="text-align:center; padding:40px; color:#aaa;">
+                <i class="fa-regular fa-clock" style="font-size:2em; margin-bottom:10px;"></i><br>
+                Belum ada yang menekan tombol.
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="assets/js/firebase-config.js"></script>
+
+    <script>
+        let currentListener = null;
+
+        firebase.auth().onAuthStateChanged(async (user) => {
+            if (!user) return window.location.href = 'index.html';
+            const doc = await db.collection('users').doc(user.uid).get();
+            if (doc.data().role !== 'teacher') {
+                alert("Halaman ini khusus Guru!");
+                window.location.href = 'index.html';
+                return;
+            }
+            loadClasses(user.uid);
+        });
+
+        async function loadClasses(uid) {
+            const select = document.getElementById('class-select');
+            select.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+            const snap = await db.collection('classes').where('teacherId', '==', uid).get();
+            snap.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = d.data().name;
+                select.appendChild(opt);
+            });
+        }
+
+        async function startSession() {
+            const classId = document.getElementById('class-select').value;
+            if(!classId) return alert("Pilih kelas dulu!");
+
+            const btnStart = document.getElementById('btn-start');
+            btnStart.disabled = true; 
+            btnStart.innerHTML = "Membersihkan...";
+
+            try {
+                // HAPUS DATA LAMA
+                const oldBuzzers = await db.collection('handSessions').doc(classId).collection('buzzers').get();
+                const batch = db.batch();
+                oldBuzzers.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+
+                // BUKA SESI BARU
+                await db.collection('handSessions').doc(classId).set({
+                    status: 'OPEN',
+                    winnerId: null,
+                    winnerName: null,
+                    startedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                btnStart.innerHTML = '<i class="fa-solid fa-play"></i> MULAI SESI';
+                document.getElementById('btn-stop').disabled = false;
+                document.getElementById('status-text').innerHTML = "Status: <span style='color:#27ae60; font-weight:bold;'>🟢 SESI DIBUKA</span>";
+                
+                const audio = document.getElementById('sfx-buzzer');
+                if(audio) { audio.load(); }
+
+                monitorBuzzers(classId);
+
+            } catch (e) {
+                console.error(e);
+                alert("Gagal memulai: " + e.message);
+                btnStart.disabled = false;
+                btnStart.innerHTML = '<i class="fa-solid fa-play"></i> MULAI SESI';
+            }
+        }
+
+        async function stopSession() {
+            const classId = document.getElementById('class-select').value;
+            document.getElementById('btn-start').disabled = false;
+            document.getElementById('btn-stop').disabled = true;
+            document.getElementById('status-text').innerHTML = "Status: <span style='color:#c0392b; font-weight:bold;'>🔴 DITUTUP</span>";
+            await db.collection('handSessions').doc(classId).update({ status: 'CLOSED' });
+        }
+
+        function monitorBuzzers(classId) {
+            const list = document.getElementById('result-list');
+            const audio = document.getElementById('sfx-buzzer');
+            
+            if(currentListener) currentListener();
+
+            currentListener = db.collection('handSessions').doc(classId).collection('buzzers')
+                .orderBy('timestamp', 'asc')
+                .onSnapshot(snap => {
+                    document.getElementById('count-badge').textContent = snap.size + " Siswa";
+                    
+                    if (!snap.empty && snap.docChanges().some(change => change.type === 'added')) {
+                        if(audio) { audio.currentTime = 0; audio.play().catch(e => console.log(e)); }
+                    }
+
+                    if(snap.empty) {
+                        list.innerHTML = '<div style="text-align:center; padding:40px; color:#aaa;">Menunggu siswa menekan...</div>';
+                        return;
+                    }
+
+                    let html = '';
+                    let rank = 1;
+
+                    snap.forEach(d => {
+                        const data = d.data();
+                        
+                        let timeStr = "...";
+                        if(data.timestamp) {
+                            const date = data.timestamp.toDate();
+                            timeStr = `${date.getSeconds()}.${date.getMilliseconds()}s`;
+                        }
+
+                        const rankClass = rank === 1 ? 'rank-1' : (rank === 2 ? 'rank-2' : (rank === 3 ? 'rank-3' : ''));
+                        const rowClass = rank === 1 ? 'winner-row' : '';
+
+                        // 🔥 TOMBOL SPESIAL HANYA UNTUK JUARA 1 🔥
+                        // Menggabungkan SAHKAN (Confetti) + KIRIM POIN (Database)
+                        const actionBtn = rank === 1 ? 
+                            `<button onclick="declareWinnerAndGivePoints('${classId}', '${d.id}', '${data.studentName}')" class="btn-point">
+                                <i class="fa-solid fa-gift"></i> SAHKAN & +10 XP
+                             </button>` : 
+                            `<span style="color:#aaa; font-size:0.8em;">+${(rank-1)*0.5}s</span>`;
+
+                        html += `
+                        <div class="student-item ${rowClass}">
+                            <div style="display:flex; align-items:center; gap:15px;">
+                                <div class="rank-badge ${rankClass}">${rank}</div>
+                                <div>
+                                    <strong style="font-size:1.1em; display:block;">${data.studentName}</strong>
+                                    <small style="color:#666; font-family:monospace;">⏱️ ${timeStr}</small>
+                                </div>
+                            </div>
+                            <div>${actionBtn}</div>
+                        </div>`;
+                        rank++;
+                    });
+                    list.innerHTML = html;
+                });
+        }
+
+        // 🔥 FUNGSI UTAMA: SAHKAN PEMENANG + KIRIM POIN 🔥
+        window.declareWinnerAndGivePoints = async function(classId, studentId, studentName) {
+            // 1. Konfirmasi Keamanan
+            if(!confirm(`Sahkan ${studentName} sebagai pemenang DAN kirim 10 Poin?`)) return;
+
+            const batch = db.batch();
+
+            // 2. Update Sesi (Agar HP Siswa Confetti & Muncul Pemenang)
+            const sessionRef = db.collection('handSessions').doc(classId);
+            batch.update(sessionRef, {
+                status: 'FINISHED',
+                winnerId: studentId,
+                winnerName: studentName
+            });
+
+            // 3. Update Poin Siswa (Tambah +10 XP)
+            const userRef = db.collection('users').doc(studentId);
+            batch.update(userRef, {
+                totalScore: firebase.firestore.FieldValue.increment(10) // Ubah angka 10 jika mau beda
+            });
+
+            // 4. Kirim Semua
+            try {
+                await batch.commit();
+                alert(`✅ Sukses! ${studentName} menang dan poin terkirim.`);
+                
+                // Matikan Sesi Otomatis
+                document.getElementById('btn-stop').click();
+            } catch(e) {
+                console.error(e);
+                alert("Gagal memproses: " + e.message);
+            }
+        }
+    </script>
+</body>
+</html>
