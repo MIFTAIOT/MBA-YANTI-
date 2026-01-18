@@ -197,7 +197,8 @@ function loadTeacherData() {
             'end-session-class-select', 
             'game-class-select-final',
             'listening-bracket-class',
-            'speaking-new-class'
+            'speaking-new-class',
+            'auto-listen-class'
         ];
 
         ids.forEach(id => { 
@@ -1603,26 +1604,42 @@ function loadTeacherSpeakingListV2() {
         });
 }
 
-// --- INIT LISTENING (VERSI BARU - BRACKET PARSER) ---
+// ==========================================
+// === FITUR LISTENING (BRACKET PARSER) ===
+// ==========================================
+
+// 1. INISIALISASI (DIPANGGIL DI AWAL)
 function initListeningTeacher() {
-    // 1. Navigasi
+    // Navigasi Menu
     const btnNav = document.getElementById('go-to-listening-admin-btn');
     if(btnNav) btnNav.onclick = () => showSubPage(document.getElementById('teacher-dashboard-page'), 'teacher-listening-page');
     
-    // 2. Tombol Upload Baru
-    const btnUpload = document.getElementById('btn-upload-bracket-listening');
-    if(btnUpload) btnUpload.onclick = uploadListeningBracketMode;
+    // Tombol Upload (ID harus sesuai index.html: btn-auto-upload-listen)
+    const btnUpload = document.getElementById('btn-auto-upload-listen');
+    if(btnUpload) {
+        btnUpload.onclick = uploadListeningBracketMode; // Hubungkan ke fungsi
+    } else {
+        console.error("Tombol Upload Listening tidak ditemukan!");
+    }
     
-    // 3. Load Data List
+    // Load Daftar Soal
     loadListeningTasks();
 }
 
-// FUNGSI UPLOAD & PARSING OTOMATIS
+// 2. FUNGSI UPLOAD & PARSING (YANG HILANG TADI)
 async function uploadListeningBracketMode() {
-    const titleInput = document.getElementById('listening-bracket-title');
-    const classInput = document.getElementById('listening-bracket-class');
-    const fileInput = document.getElementById('listening-bracket-file');
+    // Ambil Elemen berdasarkan ID di index.html
+    const titleInput = document.getElementById('auto-listen-title');
+    const linkInput = document.getElementById('auto-listen-link');
+    const classInput = document.getElementById('auto-listen-class');
+    const fileInput = document.getElementById('auto-listen-file');
 
+    // Validasi Elemen Ada
+    if (!titleInput || !classInput || !fileInput) {
+        return alert("Error: Elemen input tidak ditemukan di HTML.");
+    }
+
+    // Validasi Isi
     if (!titleInput.value || !classInput.value || fileInput.files.length === 0) {
         return alert("⚠️ Mohon lengkapi Judul, Kelas, dan File .txt!");
     }
@@ -1634,47 +1651,59 @@ async function uploadListeningBracketMode() {
         const rawText = e.target.result;
         
         // --- LOGIKA PARSING (MEMISAHKAN SOAL & KUNCI) ---
-        let answerKey = []; // Array untuk menyimpan jawaban benar: ["went", "bought"]
+        let answerKey = []; 
         
         // Regex: Cari kata di dalam kurung siku [...]
-        // Ganti [went] menjadi ___ untuk soal
-        // Simpan "went" ke answerKey
-        
+        // Ganti [went] menjadi ___ untuk soal yang akan tampil di siswa
+        // Simpan "went" ke dalam array kunci jawaban
         const cleanText = rawText.replace(/\[(.*?)\]/g, function(match, p1) {
-            answerKey.push(p1.trim()); // Simpan kunci jawaban
-            return "___"; // Ganti dengan tanda kosong di teks soal
+            answerKey.push(p1.trim()); 
+            return "___"; 
         });
 
         if (answerKey.length === 0) {
-            return alert("⚠️ Tidak ditemukan tanda kurung [...] di file. Pastikan format benar! Contoh: I [went] to school.");
+            return alert("⚠️ Format salah! Tidak ditemukan tanda kurung [...].\nContoh yang benar: I [went] to school.");
         }
+
+        // Tampilkan loading di tombol
+        const btn = document.getElementById('btn-auto-upload-listen');
+        const oldText = btn.innerHTML;
+        btn.innerHTML = "Mengupload..."; btn.disabled = true;
 
         try {
             // Simpan ke Firebase
             await db.collection('listeningTasks').add({
                 title: titleInput.value,
-                story: cleanText,       // Teks yang sudah disensor (ada ___)
-                answerKeys: answerKey,  // Array kunci jawaban
+                link: linkInput.value || "", // Simpan Link Audio/Video (Opsional)
+                story: cleanText,       // Teks soal (sensor)
+                answerKeys: answerKey,  // Kunci jawaban
                 classId: classInput.value,
-                type: 'fill_blank',     // Penanda tipe soal baru
+                type: 'fill_blank',     
                 teacherId: window.currentUser.uid,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            alert(`✅ Berhasil! Terdeteksi ${answerKey.length} soal isian.`);
+            alert(`✅ Berhasil! Terdeteksi ${answerKey.length} kata kunci.`);
             
             // Reset Form
             titleInput.value = '';
+            if(linkInput) linkInput.value = '';
             fileInput.value = '';
             
         } catch (err) {
             console.error(err);
             alert("Gagal upload: " + err.message);
+        } finally {
+            // Kembalikan tombol
+            btn.innerHTML = oldText; btn.disabled = false;
         }
     };
 
+    // Baca file sebagai teks
     reader.readAsText(file);
 }
+
+// 3. LOAD DAFTAR SOAL (AGAR LIST MUNCUL)
 function loadListeningTasks() {
     const list = document.getElementById('teacher-listening-list');
     if(!list) return;
@@ -1684,14 +1713,28 @@ function loadListeningTasks() {
         .orderBy('createdAt', 'desc')
         .onSnapshot(s => {
             let h = '';
-            if(s.empty) { list.innerHTML = '<p style="text-align:center; color:#999;">Belum ada soal.</p>'; return; }
+            if(s.empty) { 
+                list.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Belum ada soal listening.</p>'; 
+                return; 
+            }
 
             s.forEach(d => {
                 const da = d.data();
-                h += `<div class="list-item-teacher">
-                        <span><strong>${da.title}</strong></span>
-                        <button class="delete-btn" onclick="if(confirm('Hapus soal ini?')) db.collection('listeningTasks').doc('${d.id}').delete()">Hapus</button>
-                      </div>`;
+                // Format tanggal singkat
+                const dateStr = da.createdAt ? da.createdAt.toDate().toLocaleDateString() : '';
+                
+                h += `
+                <div class="list-item-teacher">
+                    <div style="flex-grow:1;">
+                        <span style="font-weight:bold; font-size:1.1em;">${da.title}</span><br>
+                        <small style="color:#666;">
+                            <i class="fa-solid fa-key"></i> ${da.answerKeys.length} Soal • Kelas: ${da.classId} • ${dateStr}
+                        </small>
+                    </div>
+                    <button class="delete-btn" onclick="if(confirm('Hapus soal ini?')) db.collection('listeningTasks').doc('${d.id}').delete()">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>`;
             });
             list.innerHTML = h;
         });
