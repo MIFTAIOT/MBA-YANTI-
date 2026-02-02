@@ -11,6 +11,10 @@
         .container { max-width: 600px; margin: 0 auto; position: relative; }
         .btn-cyber { background: #c0392b; color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: bold; font-family: 'Orbitron'; letter-spacing: 2px; margin-top: 10px; cursor: pointer; box-shadow: 0 5px 0 #922b21; transition: 0.2s; }
         .btn-cyber:active { transform: translateY(5px); box-shadow: none; }
+        
+        .btn-stop { background: #f39c12; box-shadow: 0 5px 0 #d35400; } /* Tombol Stop Kuning */
+        .btn-close { background: #555; box-shadow: 0 5px 0 #333; } /* Tombol Tutup Abu */
+
         .panel { background: #2c2c2e; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #444; }
         input, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
         
@@ -18,14 +22,8 @@
         .target-badge { background: #e74c3c; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; font-weight: bold; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
-        /* TOMBOL TUTORIAL POJOK ATAS */
-        .btn-tutorial {
-            position: absolute; top: -10px; right: 0;
-            background: rgba(255, 255, 255, 0.1); border: 1px solid #aaa;
-            color: #aaa; padding: 5px 15px; border-radius: 20px;
-            font-size: 0.8em; cursor: pointer; text-decoration: none;
-            display: flex; align-items: center; gap: 5px;
-        }
+        /* TOMBOL TUTORIAL */
+        .btn-tutorial { position: absolute; top: -10px; right: 0; background: rgba(255, 255, 255, 0.1); border: 1px solid #aaa; color: #aaa; padding: 5px 15px; border-radius: 20px; font-size: 0.8em; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 5px; }
         .btn-tutorial:hover { background: white; color: #333; }
     </style>
 </head>
@@ -35,10 +33,7 @@
 
     <div class="container">
         <button onclick="window.location.href='index.html'" style="background:none; border:none; color:#aaa; cursor:pointer; float:left;"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
-        
-        <a href="https://youtube.com/your-channel-link" target="_blank" class="btn-tutorial">
-            <i class="fa-brands fa-youtube"></i> Petunjuk Fitur
-        </a>
+        <a href="https://youtube.com/your-channel-link" target="_blank" class="btn-tutorial"><i class="fa-brands fa-youtube"></i> Petunjuk Fitur</a>
 
         <h1 style="font-family:'Orbitron'; color:#e74c3c; clear:both; margin-top: 40px;">AR HUNTER</h1>
 
@@ -57,20 +52,25 @@
             
             <div style="background:#000; padding:15px; border-radius:10px; border: 2px dashed #e74c3c;">
                 <h3 style="margin:0; color:#e74c3c;">⚠️ DANGER ZONE</h3>
-                <p style="font-size:0.9em;">Klik tombol di bawah untuk memilih 5 Target baru secara acak.</p>
+                <p style="font-size:0.9em;">Klik untuk memilih 5 Target baru & Mulai Ronde.</p>
                 <button onclick="randomizeTargets()" class="btn-cyber">
-                    <i class="fa-solid fa-biohazard"></i> SEBAR WABAH (ACAK)
+                    <i class="fa-solid fa-biohazard"></i> SEBAR WABAH (START/ACAK)
                 </button>
             </div>
 
             <div style="margin-top:20px;">
                 <h4>Target Saat Ini:</h4>
-                <div id="target-list" class="target-list">
-                    <span style="color:#666;">Belum ada target...</span>
-                </div>
+                <div id="target-list" class="target-list"><span style="color:#666;">Menunggu start...</span></div>
             </div>
 
-            <button onclick="endGame()" class="btn-cyber" style="background:#555; margin-top:30px;">AKHIRI GAME</button>
+            <div style="margin-top:30px; display:grid; gap:10px;">
+                <button onclick="stopGameForClaim()" class="btn-cyber btn-stop">
+                    <i class="fa-solid fa-hand"></i> STOP & IZINKAN KLAIM
+                </button>
+                <button onclick="closeRoom()" class="btn-cyber btn-close">
+                    <i class="fa-solid fa-door-closed"></i> TUTUP ROOM (SELESAI)
+                </button>
+            </div>
         </div>
     </div>
 
@@ -83,7 +83,6 @@
         let sessionId = null;
         let questions = [];
 
-        // 1. Load Kelas
         firebase.auth().onAuthStateChanged(async u => {
             if(u) {
                 const snap = await db.collection('classes').where('teacherId','==',u.uid).get();
@@ -92,7 +91,6 @@
             }
         });
 
-        // 2. Baca File Soal
         document.getElementById('file-soal').addEventListener('change', function(e) {
             const reader = new FileReader();
             reader.onload = function(ev) {
@@ -110,6 +108,7 @@
                     else if(l.startsWith('D:')) q.options[3] = l.substring(2).trim();
                     else if(l.startsWith('Jawaban:')) {
                         const k = l.substring(8).trim().toUpperCase();
+                        // LOGIKA KUNCI: A=0, B=1, C=2, D=3
                         q.key = k==='B'?1 : k==='C'?2 : k==='D'?3 : 0;
                     }
                 });
@@ -119,7 +118,6 @@
             reader.readAsText(this.files[0]);
         });
 
-        // 3. Buat Sesi
         async function createSession() {
             if(!questions.length) return alert("Upload soal dulu!");
             const pin = Math.floor(100000 + Math.random() * 900000).toString();
@@ -128,7 +126,7 @@
                 pin: pin,
                 teacherId: firebase.auth().currentUser.uid,
                 classId: document.getElementById('class-select').value,
-                status: 'active',
+                status: 'waiting', // Status awal waiting
                 questions: questions,
                 targets: [] 
             });
@@ -141,9 +139,8 @@
             monitorTargets();
         }
 
-        // 4. ACAK TARGET
         async function randomizeTargets() {
-            // Putar Suara Sirene
+            // Mainkan Sirene
             const sfx = document.getElementById('sfx-siren');
             if(sfx) { sfx.currentTime=0; sfx.play(); }
 
@@ -152,7 +149,7 @@
 
             const players = snap.docs.map(d => ({id: d.id, name: d.data().name}));
             
-            // Kocok Array
+            // Kocok
             for (let i = players.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [players[i], players[j]] = [players[j], players[i]];
@@ -161,12 +158,13 @@
             const count = Math.min(5, players.length);
             const newTargets = players.slice(0, count).map(p => p.id);
 
+            // Update status jadi 'active' biar game jalan
             await db.collection('arSessions').doc(sessionId).update({
                 targets: newTargets,
+                status: 'active', 
                 lastShuffle: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Reset role di subcollection
             const batch = db.batch();
             snap.docs.forEach(d => {
                 const isTarget = newTargets.includes(d.id);
@@ -185,8 +183,16 @@
             });
         }
         
-        async function endGame() {
-             if(confirm("Akhiri sesi?")) {
+        // FUNGSI STOP TAPI TIDAK BUBAR (Hanya Pause untuk Klaim)
+        async function stopGameForClaim() {
+             if(confirm("Hentikan permainan sementara? Siswa bisa klaim poin.")) {
+                 await db.collection('arSessions').doc(sessionId).update({status: 'claiming'});
+             }
+        }
+
+        // FUNGSI TUTUP ROOM (Bubarkan Kelas)
+        async function closeRoom() {
+             if(confirm("Tutup Room sepenuhnya? Siswa akan keluar.")) {
                  await db.collection('arSessions').doc(sessionId).update({status: 'finished'});
                  window.location.href='index.html';
              }
