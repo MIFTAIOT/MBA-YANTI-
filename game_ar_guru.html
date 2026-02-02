@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guru - AR Knowledge Hunt</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #1a1a1d; color: white; font-family: 'Poppins', sans-serif; padding: 20px; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; position: relative; }
+        .btn-cyber { background: #c0392b; color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: bold; font-family: 'Orbitron'; letter-spacing: 2px; margin-top: 10px; cursor: pointer; box-shadow: 0 5px 0 #922b21; transition: 0.2s; }
+        .btn-cyber:active { transform: translateY(5px); box-shadow: none; }
+        .panel { background: #2c2c2e; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #444; }
+        input, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
+        
+        .target-list { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+        .target-badge { background: #e74c3c; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; font-weight: bold; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+        /* TOMBOL TUTORIAL POJOK ATAS */
+        .btn-tutorial {
+            position: absolute; top: -10px; right: 0;
+            background: rgba(255, 255, 255, 0.1); border: 1px solid #aaa;
+            color: #aaa; padding: 5px 15px; border-radius: 20px;
+            font-size: 0.8em; cursor: pointer; text-decoration: none;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .btn-tutorial:hover { background: white; color: #333; }
+    </style>
+</head>
+<body>
+
+    <audio id="sfx-siren" src="assets/sounds/siren.mp3"></audio>
+
+    <div class="container">
+        <button onclick="window.location.href='index.html'" style="background:none; border:none; color:#aaa; cursor:pointer; float:left;"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+        
+        <a href="https://youtube.com/your-channel-link" target="_blank" class="btn-tutorial">
+            <i class="fa-brands fa-youtube"></i> Petunjuk Fitur
+        </a>
+
+        <h1 style="font-family:'Orbitron'; color:#e74c3c; clear:both; margin-top: 40px;">AR HUNTER</h1>
+
+        <div id="setup-panel" class="panel">
+            <h3>1. Setup Game</h3>
+            <select id="class-select"></select>
+            <input type="file" id="file-soal" accept=".txt">
+            <p style="font-size:0.8em; color:#aaa;">Format .txt: Soal: ... A: ... Jawaban: A</p>
+            <button onclick="createSession()" class="btn-cyber" style="background:#2980b9;">BUKA ROOM</button>
+        </div>
+
+        <div id="game-panel" class="panel" style="display:none;">
+            <h1 id="pin-display" style="font-size:3em; margin:0; color:#f1c40f;">...</h1>
+            <p>PIN GAME</p>
+            <hr style="border-color:#444;">
+            
+            <div style="background:#000; padding:15px; border-radius:10px; border: 2px dashed #e74c3c;">
+                <h3 style="margin:0; color:#e74c3c;">⚠️ DANGER ZONE</h3>
+                <p style="font-size:0.9em;">Klik tombol di bawah untuk memilih 5 Target baru secara acak.</p>
+                <button onclick="randomizeTargets()" class="btn-cyber">
+                    <i class="fa-solid fa-biohazard"></i> SEBAR WABAH (ACAK)
+                </button>
+            </div>
+
+            <div style="margin-top:20px;">
+                <h4>Target Saat Ini:</h4>
+                <div id="target-list" class="target-list">
+                    <span style="color:#666;">Belum ada target...</span>
+                </div>
+            </div>
+
+            <button onclick="endGame()" class="btn-cyber" style="background:#555; margin-top:30px;">AKHIRI GAME</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="assets/js/firebase-config.js"></script>
+
+    <script>
+        let sessionId = null;
+        let questions = [];
+
+        // 1. Load Kelas
+        firebase.auth().onAuthStateChanged(async u => {
+            if(u) {
+                const snap = await db.collection('classes').where('teacherId','==',u.uid).get();
+                const sel = document.getElementById('class-select');
+                snap.forEach(d => sel.innerHTML += `<option value="${d.id}">${d.data().name}</option>`);
+            }
+        });
+
+        // 2. Baca File Soal
+        document.getElementById('file-soal').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const lines = ev.target.result.split(/\r?\n/);
+                let q = null;
+                questions = [];
+                lines.forEach(l => {
+                    l = l.trim();
+                    if(l.startsWith('Soal:')) {
+                        if(q) questions.push(q);
+                        q = { text: l.substring(5).trim(), options: ['','','',''], key: 0 };
+                    } else if(l.startsWith('A:')) q.options[0] = l.substring(2).trim();
+                    else if(l.startsWith('B:')) q.options[1] = l.substring(2).trim();
+                    else if(l.startsWith('C:')) q.options[2] = l.substring(2).trim();
+                    else if(l.startsWith('D:')) q.options[3] = l.substring(2).trim();
+                    else if(l.startsWith('Jawaban:')) {
+                        const k = l.substring(8).trim().toUpperCase();
+                        q.key = k==='B'?1 : k==='C'?2 : k==='D'?3 : 0;
+                    }
+                });
+                if(q) questions.push(q);
+                alert(`${questions.length} Soal Siap!`);
+            };
+            reader.readAsText(this.files[0]);
+        });
+
+        // 3. Buat Sesi
+        async function createSession() {
+            if(!questions.length) return alert("Upload soal dulu!");
+            const pin = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            const ref = await db.collection('arSessions').add({
+                pin: pin,
+                teacherId: firebase.auth().currentUser.uid,
+                classId: document.getElementById('class-select').value,
+                status: 'active',
+                questions: questions,
+                targets: [] 
+            });
+            sessionId = ref.id;
+            
+            document.getElementById('setup-panel').style.display='none';
+            document.getElementById('game-panel').style.display='block';
+            document.getElementById('pin-display').textContent = pin;
+
+            monitorTargets();
+        }
+
+        // 4. ACAK TARGET
+        async function randomizeTargets() {
+            // Putar Suara Sirene
+            const sfx = document.getElementById('sfx-siren');
+            if(sfx) { sfx.currentTime=0; sfx.play(); }
+
+            const snap = await db.collection('arSessions').doc(sessionId).collection('players').get();
+            if(snap.empty) return alert("Belum ada siswa masuk!");
+
+            const players = snap.docs.map(d => ({id: d.id, name: d.data().name}));
+            
+            // Kocok Array
+            for (let i = players.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [players[i], players[j]] = [players[j], players[i]];
+            }
+
+            const count = Math.min(5, players.length);
+            const newTargets = players.slice(0, count).map(p => p.id);
+
+            await db.collection('arSessions').doc(sessionId).update({
+                targets: newTargets,
+                lastShuffle: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Reset role di subcollection
+            const batch = db.batch();
+            snap.docs.forEach(d => {
+                const isTarget = newTargets.includes(d.id);
+                batch.update(d.ref, { role: isTarget ? 'target' : 'hunter' });
+            });
+            await batch.commit();
+        }
+
+        function monitorTargets() {
+            db.collection('arSessions').doc(sessionId).collection('players').where('role', '==', 'target').onSnapshot(snap => {
+                const div = document.getElementById('target-list');
+                div.innerHTML = '';
+                snap.forEach(d => {
+                    div.innerHTML += `<div class="target-badge">${d.data().name}</div>`;
+                });
+            });
+        }
+        
+        async function endGame() {
+             if(confirm("Akhiri sesi?")) {
+                 await db.collection('arSessions').doc(sessionId).update({status: 'finished'});
+                 window.location.href='index.html';
+             }
+        }
+    </script>
+</body>
+</html>

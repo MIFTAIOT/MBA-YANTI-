@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AR Knowledge Hunt</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { margin: 0; background: #000; font-family: 'Poppins', sans-serif; color: white; overflow: hidden; }
+        
+        /* LAYAR LOGIN */
+        #screen-login { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #111; position: relative;}
+        .pin-input { font-size: 2em; padding: 15px; text-align: center; letter-spacing: 5px; width: 200px; border-radius: 10px; border: none; margin-bottom: 20px; }
+        .btn-join { background: #3498db; color: white; border: none; padding: 15px 40px; font-weight: bold; border-radius: 30px; font-size: 1.2em; cursor: pointer; }
+
+        /* TOMBOL TUTORIAL */
+        .btn-tutorial {
+            position: absolute; top: 15px; right: 15px; z-index: 1000;
+            background: rgba(0, 0, 0, 0.6); border: 1px solid #fff;
+            color: #fff; padding: 5px 12px; border-radius: 20px;
+            font-size: 0.75em; cursor: pointer; text-decoration: none;
+            display: flex; align-items: center; gap: 5px;
+        }
+
+        /* LAYAR HUNTER */
+        #screen-hunter { display: none; height: 100vh; flex-direction: column; position: relative; }
+        #reader { width: 100%; height: 60vh; background: black; }
+        .hud-hunter { flex: 1; background: #2c3e50; padding: 20px; border-top-left-radius: 20px; border-top-right-radius: 20px; text-align: center; position: relative; }
+        
+        /* LAYAR TARGET */
+        #screen-target { display: none; height: 100vh; flex-direction: column; justify-content: center; align-items: center; background: #c0392b; animation: pulseRed 1s infinite; position: relative; }
+        @keyframes pulseRed { 0% { background: #c0392b; } 50% { background: #a93226; } 100% { background: #c0392b; } }
+        #qrcode { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+
+        /* MODAL SOAL */
+        #modal-quiz { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 999; display: none; flex-direction: column; justify-content: center; padding: 20px; box-sizing: border-box; }
+        .quiz-card { background: white; color: #333; padding: 20px; border-radius: 15px; text-align: center; }
+        .opt-btn { width: 100%; padding: 15px; margin: 5px 0; border: 1px solid #ddd; background: #f9f9f9; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .opt-btn:active { background: #ddd; }
+
+        /* TOMBOL CLAIM (Fixed Bottom) */
+        .btn-claim {
+            background: #27ae60; color: white; border: none; padding: 12px;
+            width: 80%; border-radius: 25px; font-weight: bold;
+            margin-top: 10px; box-shadow: 0 4px 0 #1e8449;
+            cursor: pointer; display: inline-block;
+        }
+        .btn-claim:active { transform: translateY(4px); box-shadow: none; }
+
+    </style>
+</head>
+<body>
+
+    <div id="audio-container">
+        <audio id="sfx-scan" src="assets/sounds/scan.mp3"></audio>
+        <audio id="sfx-win" src="assets/sounds/win.mp3"></audio>
+        <audio id="sfx-lose" src="assets/sounds/lose.mp3"></audio>
+        <audio id="sfx-siren" src="assets/sounds/siren.mp3" loop></audio>
+        <audio id="sfx-click" src="assets/sounds/click.mp3"></audio>
+    </div>
+
+    <a href="https://youtube.com/your-channel-link" target="_blank" class="btn-tutorial">
+        <i class="fa-brands fa-youtube"></i> Petunjuk
+    </a>
+
+    <div id="screen-login">
+        <h1 style="font-family:'Orbitron'; color:#3498db;">AR HUNT</h1>
+        <input type="tel" id="inp-pin" class="pin-input" placeholder="PIN" maxlength="6">
+        <button onclick="joinGame()" class="btn-join">GABUNG</button>
+    </div>
+
+    <div id="screen-hunter">
+        <div id="reader"></div>
+        <div class="hud-hunter">
+            <h3 style="margin:0; color:#3498db;">MODE: HUNTER 🔫</h3>
+            <p style="font-size:0.8em; color:#aaa;">Cari teman dengan Layar Merah!</p>
+            <div style="font-size:2em; font-weight:bold; color:white;" id="my-score">0 XP</div>
+            <small id="scan-feedback" style="color:#f1c40f; display:block; min-height:20px;"></small>
+            
+            <button onclick="claimPointsAndExit()" class="btn-claim">
+                <i class="fa-solid fa-gift"></i> Simpan & Keluar
+            </button>
+        </div>
+    </div>
+
+    <div id="screen-target">
+        <h1 style="font-family:'Orbitron'; font-size:2.5em; margin:0; text-align:center;">WANTED!</h1>
+        <p style="font-weight:bold;">KAMU ADALAH TARGET!</p>
+        <div id="qrcode"></div>
+        <p style="margin-top:20px; text-align:center; font-size:0.8em;">Biarkan teman scan QR ini.<br>Kamu dapat poin jika discan.</p>
+        <div style="background:rgba(0,0,0,0.3); padding:10px 20px; border-radius:20px; margin-bottom:15px;">
+            Royalti Poin: <span id="royalty-score" style="font-weight:bold; color:#f1c40f;">0</span> XP
+        </div>
+        
+        <button onclick="claimPointsAndExit()" class="btn-claim" style="background:#fff; color:#c0392b;">
+            <i class="fa-solid fa-door-open"></i> Keluar
+        </button>
+    </div>
+
+    <div id="modal-quiz">
+        <div class="quiz-card">
+            <h3 id="q-text">Loading Soal...</h3>
+            <div id="q-options"></div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="assets/js/firebase-config.js"></script>
+
+    <script>
+        let sessionId = null;
+        let myUid = null;
+        let myName = null;
+        let html5QrcodeScanner = null;
+        let currentRole = 'hunter';
+        let scannedTargets = []; 
+        let activeQuestion = null;
+        let questionsBank = [];
+        
+        // Variabel Skor Lokal Sementara
+        let sessionScore = 0; 
+        let sessionRoyalty = 0;
+
+        // Sound Helper
+        function playSfx(id) {
+            const audio = document.getElementById(id);
+            if(audio) {
+                audio.currentTime = 0;
+                audio.play().catch(e => console.log("Audio play prevented", e));
+            }
+        }
+        function stopSfx(id) {
+            const audio = document.getElementById(id);
+            if(audio) { audio.pause(); audio.currentTime = 0; }
+        }
+
+        firebase.auth().onAuthStateChanged(u => {
+            if(!u) window.location.href='index.html';
+            myUid = u.uid;
+            myName = u.displayName;
+        });
+
+        async function joinGame() {
+            playSfx('sfx-click');
+            const pin = document.getElementById('inp-pin').value;
+            const snap = await db.collection('arSessions').where('pin','==',pin).limit(1).get();
+            if(snap.empty) return alert("PIN Salah!");
+
+            sessionId = snap.docs[0].id;
+            questionsBank = snap.docs[0].data().questions || [];
+
+            await db.collection('arSessions').doc(sessionId).collection('players').doc(myUid).set({
+                name: myName, score: 0, role: 'hunter', royalty: 0
+            }, {merge:true});
+
+            document.getElementById('screen-login').style.display='none';
+            initGameMonitor();
+        }
+
+        function initGameMonitor() {
+            // Monitor Role & Skor Realtime
+            db.collection('arSessions').doc(sessionId).collection('players').doc(myUid).onSnapshot(doc => {
+                if(!doc.exists) return;
+                const data = doc.data();
+                
+                // Update skor tampilan
+                sessionScore = data.score || 0;
+                sessionRoyalty = data.royalty || 0;
+                
+                document.getElementById('my-score').textContent = sessionScore + " XP";
+                document.getElementById('royalty-score').textContent = sessionRoyalty;
+
+                // Cek Perubahan Role
+                if(data.role !== currentRole) {
+                    currentRole = data.role;
+                    switchScreen(currentRole);
+                }
+            });
+            
+            // Monitor Jika Guru Mengakhiri Sesi
+            db.collection('arSessions').doc(sessionId).onSnapshot(doc => {
+                 if(doc.data().status === 'finished') {
+                     // Paksa klaim otomatis jika sesi ditutup guru
+                     claimPointsAndExit(true); 
+                 }
+            });
+
+            switchScreen('hunter');
+        }
+
+        function switchScreen(role) {
+            if(role === 'target') {
+                // MASUK MODE TARGET
+                if(html5QrcodeScanner) { html5QrcodeScanner.clear(); }
+                
+                document.getElementById('screen-hunter').style.display='none';
+                document.getElementById('screen-target').style.display='flex';
+                
+                // Mainkan Sirene
+                playSfx('sfx-siren');
+
+                // Generate QR
+                document.getElementById('qrcode').innerHTML = "";
+                new QRCode(document.getElementById("qrcode"), {
+                    text: myUid,
+                    width: 200, height: 200
+                });
+
+            } else {
+                // MASUK MODE HUNTER
+                stopSfx('sfx-siren'); // Stop sirene
+                
+                document.getElementById('screen-target').style.display='none';
+                document.getElementById('screen-hunter').style.display='flex';
+                
+                setTimeout(() => { startScanner(); }, 500);
+            }
+        }
+
+        function startScanner() {
+            if(html5QrcodeScanner) html5QrcodeScanner.clear();
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+            html5QrcodeScanner.render(onScanSuccess);
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            if(scannedTargets.includes(decodedText)) {
+                document.getElementById('scan-feedback').textContent = "⛔ Sudah pernah discan!";
+                return; 
+            }
+
+            db.collection('arSessions').doc(sessionId).collection('players').doc(decodedText).get().then(doc => {
+                if(doc.exists && doc.data().role === 'target') {
+                    // SUKSES SCAN TARGET
+                    playSfx('sfx-scan');
+                    html5QrcodeScanner.pause();
+                    
+                    // Beri Royalti ke Target
+                    db.collection('arSessions').doc(sessionId).collection('players').doc(decodedText).update({
+                        royalty: firebase.firestore.FieldValue.increment(10),
+                        score: firebase.firestore.FieldValue.increment(10)
+                    });
+
+                    showQuestion(decodedText);
+                } else {
+                    document.getElementById('scan-feedback').textContent = "❌ Dia bukan target!";
+                }
+            });
+        }
+
+        function showQuestion(targetId) {
+            const rnd = Math.floor(Math.random() * questionsBank.length);
+            activeQuestion = questionsBank[rnd];
+            activeQuestion.targetId = targetId;
+
+            document.getElementById('q-text').textContent = activeQuestion.text;
+            const optsDiv = document.getElementById('q-options');
+            optsDiv.innerHTML = '';
+            
+            activeQuestion.options.forEach((opt, idx) => {
+                optsDiv.innerHTML += `<button class="opt-btn" onclick="answer(${idx})">${['A','B','C','D'][idx]}. ${opt}</button>`;
+            });
+
+            document.getElementById('modal-quiz').style.display = 'flex';
+        }
+
+        async function answer(idx) {
+            const isCorrect = (idx + 1) === activeQuestion.key;
+            document.getElementById('modal-quiz').style.display = 'none';
+            
+            if(isCorrect) {
+                playSfx('sfx-win');
+                alert("BENAR! +100 XP");
+                await db.collection('arSessions').doc(sessionId).collection('players').doc(myUid).update({
+                    score: firebase.firestore.FieldValue.increment(100)
+                });
+                scannedTargets.push(activeQuestion.targetId);
+            } else {
+                playSfx('sfx-lose');
+                alert("SALAH! Coba cari target lain.");
+            }
+
+            html5QrcodeScanner.resume();
+        }
+
+        // 🔥 FUNGSI UTAMA: KLAIM POIN KE PROFIL 🔥
+        async function claimPointsAndExit(auto = false) {
+            const btn = document.querySelectorAll('.btn-claim');
+            btn.forEach(b => { b.disabled = true; b.textContent = "Menyimpan..."; });
+
+            const totalEarned = sessionScore; 
+
+            if(totalEarned > 0) {
+                try {
+                    // Update Poin Utama User
+                    await db.collection('users').doc(myUid).update({
+                        totalScore: firebase.firestore.FieldValue.increment(totalEarned)
+                    });
+                    
+                    if(!auto) alert(`🎉 HEBAT! Kamu membawa pulang ${totalEarned} XP!`);
+                } catch(e) {
+                    console.error("Gagal klaim:", e);
+                    alert("Gagal menyimpan poin. Cek koneksi.");
+                }
+            } else {
+                if(!auto) alert("Kamu belum dapat poin. Semangat lain kali!");
+            }
+
+            // Stop musik & pindah halaman
+            stopSfx('sfx-siren');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
